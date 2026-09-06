@@ -22,6 +22,22 @@ typedef struct {
     int Circuito;
 } Elector;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //===========================================================================================================================
 //===========================================================================================================================
 //========================================================LVO================================================================
@@ -120,7 +136,7 @@ if(ext == 1){
     }
     else{
         Aux_Borrar = Pos->PS;
-        Pos = Aux_Borrar->PS;
+        Pos->PS = Aux_Borrar->PS;
     }
     free(Aux_Borrar);
     *exito = 1;
@@ -129,6 +145,18 @@ if(ext == 1){
      *exito = 0;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 //===========================================================================================================================
 //===========================================================================================================================
@@ -142,7 +170,91 @@ typedef struct{
     struct nodo_abb* P_der;
 } nodo_abb;
 
-//Por ultimo LSOBB en el main, es un arreglo mas
+//Localizar (in x, out pos, out éxito)
+void Localizar_ABB(int Dni_Buscado, nodo_abb* raiz, nodo_abb** pos, int* exito){
+nodo_abb* actual = raiz;
+nodo_abb* padre = NULL;
+
+while(actual != NULL && Dni_Buscado != actual->VIPD.DNI){
+        padre = actual;
+        if(actual->VIPD.DNI > Dni_Buscado){ //Debo de ir por la izq si el actual es > buscado
+            actual = actual->P_izq;
+        }else{
+            actual = actual->P_der;
+        }
+}
+if (actual != NULL && actual->VIPD.DNI == Dni_Buscado){
+    *exito = 1;
+    *pos = actual;
+}else{
+    *exito = 0;
+    *pos = padre;}
+}
+
+
+//Alta (in x, in y, out éxito)
+void Alta_ABB(Elector Nuevo,nodo_abb** raiz, int* exito){
+int dni = Nuevo.DNI;
+nodo_abb* pos;
+int ext;
+
+Localizar_ABB(dni,*raiz,&pos,&ext);
+
+if(ext == 0){ //no existe el elemento
+    nodo_abb* nuevo_nodo = (nodo_abb*)malloc(sizeof(nodo_abb)); //vemos si hay espacio
+    if(nuevo_nodo != NULL){
+    //HAY ESPACIO TODAVIA
+        nuevo_nodo->VIPD = Nuevo;
+        nuevo_nodo->P_izq = NULL;
+        nuevo_nodo->P_der = NULL;
+
+        if(pos == NULL){
+            //Arbol vacio
+            *raiz = nuevo_nodo;
+
+        }else{
+            if(pos->VIPD.DNI > dni){
+                pos->P_izq = nuevo_nodo;
+            }else{
+                pos->P_der = nuevo_nodo;
+            }
+        }
+
+    *exito = 1;
+    } else{
+    //NO HAY ESPACIO
+   *exito = 2;
+    }
+    }else{
+    *exito = 0; //dni ya existe
+}
+}
+
+//Baja (in x, in y, out éxito)
+void Baja_ABB(){}
+
+//Evocación (in x, out y, out éxito)
+void Evocacion_ABB(){}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Función mayus
 void mayusc(char* cadena) {
