@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1788902839 source:c:\users\0xfacu\desktop\pmi\pmi eda 1¬\main\main.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<ctype.h>
+

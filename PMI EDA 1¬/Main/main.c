@@ -44,9 +44,9 @@ typedef struct {
 //===========================================================================================================================
 //===========================================================================================================================
 
-typedef struct{
+typedef struct nodo_lvo {
     Elector VIPD;
-   struct nodo_lvo* PS;
+    struct nodo_lvo* PS;
 } nodo_lvo;
 
 //LOCALIZAR LVO
@@ -65,7 +65,7 @@ void Localizar_LVO(int dni_buscado, nodo_lvo* cabeza, nodo_lvo** pos, int* exito
     } else {
         *exito = 0; //DERROTA
     }
-    *pos = ant; //DEVOLVEMOS LA POS PARA EL ALTA
+    *pos = anterior; //DEVOLVEMOS LA POS PARA EL ALTA
 }
 
 //Alta (in x, in y, out éxito)
@@ -157,10 +157,11 @@ void Baja_LVO(Elector a_dar_de_baja, nodo_lvo** cabeza, int* exito) {
     } else {
         *exito = 0; // Fracasa: no hay una nupla con ese x
     }
-}}
+}
+
 
 void Init_LVO(nodo_lvo** cabeza) {
-    cabeza = (nodo_lvo)malloc(sizeof(nodo_lvo));
+    *cabeza = (nodo_lvo*)malloc(sizeof(nodo_lvo));
 
     if (*cabeza != NULL) {
         //Le asignamos el valor centinela al DNI
@@ -187,7 +188,7 @@ void Init_LVO(nodo_lvo** cabeza) {
 //===========================================================================================================================
 //===========================================================================================================================
 //Definimo estructura ABB
-typedef struct{
+typedef struct nodo_abb{
     Elector VIPD;
     struct nodo_abb* P_izq;
     struct nodo_abb* P_der;
@@ -344,15 +345,15 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
 
 
 
-}
+}}
 
 //Evocación (in x, out y, out éxito)
-void Evocacion_ABB(int Dni_Busq,nodo_abb** raiz,Elector* salida, int* exito){
+void Evocacion_ABB(int Dni_Busq, Elector* salida, nodo_abb* raiz, int* exito){
 
 int ext;
 nodo_abb* pos;
 
-Localizar_ABB(Dni_Busq,*raiz,&pos,&ext);
+Localizar_ABB(Dni_Busq, raiz, &pos, &ext);
 
 
 if(ext == 1){ //El elemento existe
@@ -498,7 +499,7 @@ void mayusc(char* cadena) {
 
 int main(){
     Elector LSOBB[2200]; //apropocito le di de mas, por si se carga un archivo con 2003 personas, asi no revienta
-    int cant_lsob = 0;
+    int cant_Elementos = 0;
     //inicializamos ambos puntos a Null, despues hay que agregar el centinela a lvo
     nodo_lvo* Acc_LVO = NULL;
     nodo_abb* Raiz_ABB = NULL;
@@ -564,18 +565,18 @@ int main(){
         if (cod_operacion == 1) { // ALTA
             Alta_LVO(temp, &Acc_LVO, &ext1);
             Alta_ABB(temp, &Raiz_ABB, &ext2);
-            Alta_LSOBB(temp, &LSOBB, &ext3);
+            Alta_LSOBB(temp, LSOBB, &cant_Elementos, &ext3);
 
-            if(ext1 == 1 && ext2 == 1 /* && ext3 == 1 */){
+            if(ext1 == 1 && ext2 == 1 && ext3 == 1){
                 printf("Carga exitosa.\n");
             } else {
                 printf("Algo salio mal bro.\n");
             }
 
         } else if (cod_operacion == 2) { // BAJA
-            Baja_LVO(temp.DNI, &Acc_LVO, &ext1);
+            Baja_LVO(temp, &Acc_LVO, &ext1);
             Baja_ABB(temp, &Raiz_ABB, &ext2);
-            Baja_LSOBB(temp, &LSOBB, &ext3);
+            Baja_LSOBB(temp, LSOBB, &cant_Elementos, &ext3);
 
             if(ext1 == 1 && ext2 == 1){
                 printf("Baja exitosa.\n");
@@ -586,8 +587,7 @@ int main(){
 
             Evocacion_LVO(temp.DNI, &recup_LVO, Acc_LVO, &ext1);
             Evocacion_ABB(temp.DNI, &recup_ABB, Raiz_ABB, &ext2);
-            Evocacion_LSOBB(temp.DNI, &recup_LSOBB, LSOBB, &ext3);
-
+            Evocacion_LSOBB(temp.DNI, LSOBB, &recup_LSOBB, cant_Elementos, &ext3);
             if(ext1 == 1 && ext2 == 1){
                 // La teoria prohíbe imprimir ADENTRO de la función,
                 // por lo que imprimimos aquí en el main:
@@ -614,5 +614,7 @@ int main(){
 
 
 
-
+return 1;
 }
+
+
