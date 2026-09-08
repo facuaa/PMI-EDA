@@ -76,7 +76,6 @@ void Alta_LVO(Elector nuevo, nodo_lvo** cabeza, int* exito){
     int ext;
     Localizar_LVO(dni_busc, *cabeza, &Pos, &ext);
     if (ext == 1){
-        printf("Error: Ya existe el DNI: %d en LVO\n", dni_busc); //VERRRRRRRRRRR LOS CARTELES VAN EN EL MAIN????????? O NO?
         *exito = 0;
     }else{
         nodo_lvo* nuevo_nodo = (nodo_lvo*)malloc(sizeof(nodo_lvo)); //vemos si hay espacio
@@ -255,7 +254,6 @@ if(ext == 0){ //no existe el elemento
 }
 
 //Baja (in x, in y, out éxito)
-//Baja (in x, in y, out éxito)
 void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
     int dni = a_eliminar.DNI;
     nodo_abb* actual = *raiz;
@@ -338,7 +336,6 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
                 //Caso extremo:el reemplazo era el hijo izquierdo directo (no hubo que bajar a la derecha)
                 padre_reemplazo->P_izq = reemplazo->P_izq;
             } else {
-                // El puenteo normal:el padre del reemplazo adopta a su nieto izquierdo
                 padre_reemplazo->P_der = reemplazo->P_izq;
             }
             free(reemplazo);
@@ -350,7 +347,7 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
 }
 
 //Evocación (in x, out y, out éxito)
-void Evocacion_ABB(int Dni_Busq,Elector* salida, nodo_abb** raiz, int* exito){
+void Evocacion_ABB(int Dni_Busq,nodo_abb** raiz,Elector* salida, int* exito){
 
 int ext;
 nodo_abb* pos;
@@ -371,9 +368,112 @@ if(ext == 1){ //El elemento existe
 
 
 
+//===========================================================================================================================
+//===========================================================================================================================
+//========================================================LSOBB==============================================================
+//===========================================================================================================================
+//===========================================================================================================================
+
+//Localizacion
+//Localizar (in x, out pos, out éxito)
+void Localizar_LSOBB(int dni_buscado, Elector LSOBB[], int cant_elementos, int* pos, int* exito) {
+    int li = 0;
+    int ls = cant_elementos - 1;
+    int m = (li + ls) / 2;
+
+    while (li <= ls && LSOBB[m].DNI != dni_buscado) {
+        if (LSOBB[m].DNI < dni_buscado) {
+            li = m + 1; // Descartamos la mitad izq
+        } else {
+            ls = m - 1; // Descartamos la mitad der
+        }
+        m = (li + ls) / 2; // Recalculamos el medio
+    }
+
+    // Al salir, verificamos por qué se detuvo el while
+    if (li <= ls) {
+        *exito = 1;
+        *pos = m;  // Devuelve el índice exacto donde está
+    } else {
+        *exito = 0;
+        *pos = li; // Devuelve la posición donde DEBERÍA ir para mantener el orden
+    }
+}
 
 
+//Alta
+//Alta (in x, in y, out éxito)
+void Alta_LSOBB(Elector Nuevo, Elector LSOBB[], int* cant_Elementos,int* exito){
 
+int dni_busq = Nuevo.DNI;
+int pos;
+int ext;
+
+Localizar_LSOBB(dni_busq, LSOBB, *cant_Elementos, &pos ,&ext);
+
+if(ext == 1){
+   //El elemento ya existe
+   *exito = 0;
+}else{
+    //tengo que correr todo lo que esta a la der un lugar para hacer espacio al nuevo element
+    int i;
+    for (i = *cant_Elementos - 1; i >= pos; i--){
+        LSOBB[i+1] = LSOBB[i];
+    }
+    LSOBB[pos] = Nuevo;
+    *cant_Elementos = *cant_Elementos + 1;
+    *exito = 1;
+}
+}
+
+
+//Baja
+//Baja (in x, in y, out exito)
+void Baja_LSOBB(Elector a_eliminar, Elector LSOBB[], int* cant_Elem, int* exito){
+    int ext;
+    int pos;
+
+    Localizar_LSOBB(a_eliminar.DNI, LSOBB, *cant_Elem, &pos, &ext);
+
+    if(ext == 1){
+        if (strcmp(LSOBB[pos].Nombre_Apellido, a_eliminar.Nombre_Apellido) == 0 &&
+            strcmp(LSOBB[pos].Domicilio, a_eliminar.Domicilio) == 0 &&
+            LSOBB[pos].Cod_Postal == a_eliminar.Cod_Postal &&
+            LSOBB[pos].Mesa == a_eliminar.Mesa &&
+            LSOBB[pos].Circuito == a_eliminar.Circuito) {
+
+            int i;
+            for (i = pos; i < *cant_Elem - 1; i++){
+                LSOBB[i] = LSOBB[i + 1];
+            }
+
+            *cant_Elem = *cant_Elem - 1;
+            *exito = 1;
+        } else {
+            *exito = 0;
+        }
+    } else {
+
+        *exito = 0;
+    }
+}
+
+
+//Evocacion
+//Evocación (in x, out y, out éxito)
+void Evocacion_LSOBB(int Dni_Busq, Elector LSOBB[], Elector* Salida, int cant_Elem, int* exito){
+    int ext;
+    int pos;
+
+    Localizar_LSOBB(Dni_Busq, LSOBB, cant_Elem, &pos, &ext);
+
+    if(ext == 1){
+        *Salida = LSOBB[pos];
+        *exito = 1;
+    } else {
+        *exito = 0;
+    }
+}
 
 
 
@@ -395,18 +495,45 @@ void mayusc(char* cadena) {
     }
 }
 
-//===========================================================================================================================
-//===========================================================================================================================
-//========================================================LSOBB==============================================================
-//===========================================================================================================================
-//===========================================================================================================================
+
 int main(){
     Elector LSOBB[2200]; //apropocito le di de mas, por si se carga un archivo con 2003 personas, asi no revienta
     int cant_lsob = 0;
     //inicializamos ambos puntos a Null, despues hay que agregar el centinela a lvo
-    nodo_lvo Cabeza_lvo = NULL;
-    nodo_abb Raiz_abb = NULL;
+    nodo_lvo* Acc_LVO = NULL;
+    nodo_abb* Raiz_ABB = NULL;
 
+    Init_LVO(&Acc_LVO);
+
+
+
+
+
+
+//===========================================================================================================================
+//===========================================================================================================================
+//========================================================MENU===============================================================
+//===========================================================================================================================
+//===========================================================================================================================
+    /*
+    1. Comparación de estructuras.
+    2. Mostrar Estructura LVO.
+    3. Mostrar Estructura LSOBB.
+    4. Mostrar Estructura ABB.
+    */
+    int opcion;
+
+    do{
+        printf("\n======================= MENU =======================\n");
+        printf("[1] --> Comparacion de estructuras.\n");
+        printf("[2] --> Mostrar Estructuras.\n");
+        printf("[3] --> Salir.\n");
+        printf("====================================================\n");
+        printf("Ingrese una opcion: ");
+        scanf("%d", &opcion);
+        switch(opcion) {
+            case 1:
+                  printf("Datos cargados con exito...\n");
     //=========================================================================
     //=============================leer el archivo=============================
     int cod_operacion;
@@ -431,70 +558,51 @@ int main(){
         fscanf(archivo, "%d", &temp.Mesa);
         fscanf(archivo, "%d", &temp.Circuito);
 
-        //===)((/()=$#%&/())&%$%&/(%$%&/(%$%&/()
-        //Tengo que hacer las altas para las estructuras todavia
 
+	int ext1, ext2, ext3;
 
+        if (cod_operacion == 1) { // ALTA
+            Alta_LVO(temp, &Acc_LVO, &ext1);
+            Alta_ABB(temp, &Raiz_ABB, &ext2);
+            Alta_LSOBB(temp, &LSOBB, &ext3);
 
+            if(ext1 == 1 && ext2 == 1 /* && ext3 == 1 */){
+                printf("Carga exitosa.\n");
+            } else {
+                printf("Algo salio mal bro.\n");
+            }
 
+        } else if (cod_operacion == 2) { // BAJA
+            Baja_LVO(temp.DNI, &Acc_LVO, &ext1);
+            Baja_ABB(temp, &Raiz_ABB, &ext2);
+            Baja_LSOBB(temp, &LSOBB, &ext3);
 
-        if (cod_operacion == 1) {
-            // Llamada a función ALTA
-        } else if (cod_operacion == 2) {
-            // Llamada a función BAJA
-        } else if (cod_operacion == 3) {
-            // Llamada a función EVOCACIÓN
+            if(ext1 == 1 && ext2 == 1){
+                printf("Baja exitosa.\n");
+            }
+
+        } else if (cod_operacion == 3) { // EVOCACION
+            Elector recup_LVO, recup_ABB, recup_LSOBB;
+
+            Evocacion_LVO(temp.DNI, &recup_LVO, Acc_LVO, &ext1);
+            Evocacion_ABB(temp.DNI, &recup_ABB, Raiz_ABB, &ext2);
+            Evocacion_LSOBB(temp.DNI, &recup_LSOBB, LSOBB, &ext3);
+
+            if(ext1 == 1 && ext2 == 1){
+                // La teoria prohíbe imprimir ADENTRO de la función,
+                // por lo que imprimimos aquí en el main:
+                // printf("Encontrado: %s\n", recup_ABB.Nombre_Apellido);
+            }
         }
-
     }
     fclose(archivo);
 
-
-
-
-
-
-//===========================================================================================================================
-//===========================================================================================================================
-//========================================================MENU===============================================================
-//===========================================================================================================================
-//===========================================================================================================================
-    /*
-    1. Comparación de estructuras.
-    2. Mostrar Estructura LVO.
-    3. Mostrar Estructura LSOBB.
-    4. Mostrar Estructura ABB.
-    */
-    int opcion;
-
-    do{
-        printf("\n======================= MENU =======================\n");
-        printf("1. Comparacion de estructuras.\n");
-        printf("2. Mostrar Estructura LVO.\n");
-        printf("3. Mostrar Estructura LSOBB.\n");
-        printf("4. Mostrar Estructura ABB.\n");
-        printf("5. Salir.\n");
-        printf("====================================================\n");
-        printf("Ingrese una opcion: ");
-        scanf("%d", &opcion);
-        switch(opcion) {
-            case 1:
-                printf("Opcion en construccion...\n");
                 break;
-
             case 2:
-                printf("Mostrando LVO...\n");
+                printf("Mostrando...\n");
                 break;
 
             case 3:
-                printf("Mostrando LSOBB...\n");
-                break;
-
-            case 4:
-                printf("Mostrando ABB...\n");
-                break;
-
-            case 5:
                 printf("Saliendo del programa...\n");
                 break;
 
@@ -502,7 +610,7 @@ int main(){
                 printf("Opcion invalida. Intente de nuevo.\n");
                 break;
         }
-    }while(opcion != 5);
+    }while(opcion != 3);
 
 
 
