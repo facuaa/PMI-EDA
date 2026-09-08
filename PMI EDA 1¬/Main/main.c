@@ -119,30 +119,54 @@ if(ext == 1){
 
 
 //Baja ( in x, in y, out éxito)
-void Baja_LVO(Elector a_Eliminar, nodo_lvo** cabeza, int* exito){
+void Baja_LVO(Elector a_dar_de_baja, nodo_lvo** cabeza, int* exito) {
+    int dni_busc = a_dar_de_baja.DNI;
+    nodo_lvo* Pos = NULL;
+    int ext;
 
-int Dni_Busco = a_Eliminar.DNI;
-int ext;
-nodo_lvo* Pos = NULL;
+    Localizar_LVO(dni_busc, *cabeza, &Pos, &ext);
 
-Localizar_LVO(Dni_Busco, *cabeza, &Pos, &ext);
+    if (ext == 1) { // existe una nupla con ese x
+
+        // Identificamos cuál es el nodo a borrar
+        nodo_lvo* a_eliminar = NULL;
+        if (Pos == NULL) {
+            a_eliminar = *cabeza;
+        } else {
+            a_eliminar = Pos->PS;
+        }
 
 
-if(ext == 1){
-    nodo_lvo* Aux_Borrar = NULL;
-    if(Pos == NULL){ //Primer y unico elemento
-        Aux_Borrar = *cabeza;
-        *cabeza = Aux_Borrar->PS;
+	    if (strcmp(a_eliminar->VIPD.Nombre_Apellido, a_dar_de_baja.Nombre_Apellido) == 0 &&
+            strcmp(a_eliminar->VIPD.Domicilio, a_dar_de_baja.Domicilio) == 0 &&
+            a_eliminar->VIPD.Cod_Postal == a_dar_de_baja.Cod_Postal &&
+            a_eliminar->VIPD.Mesa == a_dar_de_baja.Mesa &&
+            a_eliminar->VIPD.Circuito == a_dar_de_baja.Circuito) {
+
+                   if (Pos == NULL) {
+                *cabeza = a_eliminar->PS; // Si era el primero, la cabeza avanza
+            } else {
+                Pos->PS = a_eliminar->PS; // Puenteamos el nodo a eliminar
+            }
+
+            free(a_eliminar); // Liberamos la memoria RAM
+            *exito = 1;
+
+        } else {
+            *exito = 0; // Fracasa: El DNI existe pero los otros datos no coinciden
+        }
+    } else {
+        *exito = 0; // Fracasa: no hay una nupla con ese x
     }
-    else{
-        Aux_Borrar = Pos->PS;
-        Pos->PS = Aux_Borrar->PS;
-    }
-    free(Aux_Borrar);
-    *exito = 1;
-    }
-    else{
-     *exito = 0;
+}}
+
+void Init_LVO(nodo_lvo** cabeza) {
+    cabeza = (nodo_lvo)malloc(sizeof(nodo_lvo));
+
+    if (*cabeza != NULL) {
+        //Le asignamos el valor centinela al DNI
+        (*cabeza)->VIPD.DNI = 999999999;
+        (*cabeza)->PS = NULL;
     }
 }
 
@@ -231,10 +255,116 @@ if(ext == 0){ //no existe el elemento
 }
 
 //Baja (in x, in y, out éxito)
-void Baja_ABB(){}
+//Baja (in x, in y, out éxito)
+void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
+    int dni = a_eliminar.DNI;
+    nodo_abb* actual = *raiz;
+    nodo_abb* padre = NULL;
+
+    // 1. Búsqueda simultánea (avanzamos actual, pero retenemos al padre)
+    while (actual != NULL && actual->VIPD.DNI != dni) {
+        padre = actual;
+        if (dni < actual->VIPD.DNI) {
+            actual = actual->P_izq;
+        } else {
+            actual = actual->P_der;
+        }
+    }
+
+    // Si actual cayó a NULL, el elemento no está en el árbol
+    if (actual == NULL) {
+        *exito = 0;
+        return;
+    }
+
+
+    if (strcmp(actual->VIPD.Nombre_Apellido, a_eliminar.Nombre_Apellido) == 0 &&
+        strcmp(actual->VIPD.Domicilio, a_eliminar.Domicilio) == 0 &&
+        actual->VIPD.Cod_Postal == a_eliminar.Cod_Postal &&
+        actual->VIPD.Mesa == a_eliminar.Mesa &&
+        actual->VIPD.Circuito == a_eliminar.Circuito) {
+
+        //LoGICA DE DESCONEXIÓN
+
+        //caso1: El nodo es una hoja
+        if (actual->P_izq == NULL && actual->P_der == NULL) {
+            if (padre == NULL) {
+                *raiz = NULL; // Borramos la raíz si era el único nodo del árbol
+            } else if (padre->P_izq == actual) {
+                padre->P_izq = NULL; // Lo desenganchamos de la izquierda
+            } else {
+                padre->P_der = NULL; // Lo desenganchamos de la derecha
+            }
+            free(actual);
+        }
+
+        //caso2: El nodo tiene un solo hijo
+        else if (actual->P_izq == NULL || actual->P_der == NULL) {
+            // Identificamos de qué lado está el "nieto" que debemos salvar
+            nodo_abb* hijo_unico = NULL;
+            if (actual->P_izq != NULL) {
+                hijo_unico = actual->P_izq;
+            } else {
+                hijo_unico = actual->P_der;
+            }
+
+            // Hacemos el puenteo directo entre el abuelo (padre) y el nieto (hijo_unico)
+            if (padre == NULL) {
+                *raiz = hijo_unico; // Borramos la raíz, el hijo pasa a ser la nueva raíz
+            } else if (padre->P_izq == actual) {
+                padre->P_izq = hijo_unico;
+            } else {
+                padre->P_der = hijo_unico;
+            }
+            free(actual);
+        }
+
+        //caso3:El nodo tiene dos hijos
+        else {
+            nodo_abb* padre_reemplazo = actual;
+            nodo_abb* reemplazo = actual->P_izq; //1.buscamos en el subárbol izquierdo
+
+            //2.Viajamos todo hacia la derecha para encontrar al predecesor
+            while (reemplazo->P_der != NULL) {
+                padre_reemplazo = reemplazo;
+                reemplazo = reemplazo->P_der;
+            }
+
+            //3.copiamos la información de la nupla y al nodo que queríamos borrar
+            actual->VIPD = reemplazo->VIPD;
+
+            //4.Desconectamos físicamente al nodo reemplazo
+            if (padre_reemplazo == actual) {
+                //Caso extremo:el reemplazo era el hijo izquierdo directo (no hubo que bajar a la derecha)
+                padre_reemplazo->P_izq = reemplazo->P_izq;
+            } else {
+                // El puenteo normal:el padre del reemplazo adopta a su nieto izquierdo
+                padre_reemplazo->P_der = reemplazo->P_izq;
+            }
+            free(reemplazo);
+        }
+
+
+
+
+}
 
 //Evocación (in x, out y, out éxito)
-void Evocacion_ABB(){}
+void Evocacion_ABB(int Dni_Busq,Elector* salida, nodo_abb** raiz, int* exito){
+
+int ext;
+nodo_abb* pos;
+
+Localizar_ABB(Dni_Busq,*raiz,&pos,&ext);
+
+
+if(ext == 1){ //El elemento existe
+*salida = pos->VIPD;
+*exito = 1;
+} else{
+*exito = 0;
+}
+}
 
 
 
