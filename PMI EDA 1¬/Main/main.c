@@ -195,20 +195,23 @@ typedef struct nodo_abb{
 } nodo_abb;
 
 //Localizar (in x, out pos, out éxito)
-void Localizar_ABB(int Dni_Buscado, nodo_abb* raiz, nodo_abb** pos, int* exito){
+void Localizar_ABB(int Dni_Buscado, nodo_abb* raiz, nodo_abb** pos, int* exito, float* costo){
 nodo_abb* actual = raiz;
 nodo_abb* padre = NULL;
+*costo = 0.0;
 
 while(actual != NULL && Dni_Buscado != actual->VIPD.DNI){
-        padre = actual;
+    *costo = *costo + 1;    
+	padre = actual;
         if(actual->VIPD.DNI > Dni_Buscado){ //Debo de ir por la izq si el actual es > buscado
             actual = actual->P_izq;
         }else{
             actual = actual->P_der;
         }
 }
-if (actual != NULL && actual->VIPD.DNI == Dni_Buscado){
-    *exito = 1;
+if (actual != NULL){
+    *costo = *costo + 1;
+	*exito = 1;
     *pos = actual;
 }else{
     *exito = 0;
@@ -217,12 +220,13 @@ if (actual != NULL && actual->VIPD.DNI == Dni_Buscado){
 
 
 //Alta (in x, in y, out éxito)
-void Alta_ABB(Elector Nuevo,nodo_abb** raiz, int* exito){
+void Alta_ABB(Elector Nuevo,nodo_abb** raiz, int* exito,float* costo){
 int dni = Nuevo.DNI;
 nodo_abb* pos;
 int ext;
+*costo = 0;
 
-Localizar_ABB(dni,*raiz,&pos,&ext);
+Localizar_ABB(dni,*raiz,&pos,&ext, costo);
 
 if(ext == 0){ //no existe el elemento
     nodo_abb* nuevo_nodo = (nodo_abb*)malloc(sizeof(nodo_abb)); //vemos si hay espacio
@@ -235,15 +239,15 @@ if(ext == 0){ //no existe el elemento
         if(pos == NULL){
             //Arbol vacio
             *raiz = nuevo_nodo;
-
+			*costo = *costo + 0.5;
         }else{
             if(pos->VIPD.DNI > dni){
                 pos->P_izq = nuevo_nodo;
             }else{
                 pos->P_der = nuevo_nodo;
             }
-        }
-
+        	*costo = *costo + 0.5;
+		}
     *exito = 1;
     } else{
     //NO HAY ESPACIO
@@ -255,13 +259,15 @@ if(ext == 0){ //no existe el elemento
 }
 
 //Baja (in x, in y, out éxito)
-void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
+void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito, float* costo) {
     int dni = a_eliminar.DNI;
     nodo_abb* actual = *raiz;
     nodo_abb* padre = NULL;
+    *costo = 0.0; 
 
-    // 1. Búsqueda simultánea (avanzamos actual, pero retenemos al padre)
+    // 1. Búsqueda simultánea (Costo de consulta: +1 por celda)
     while (actual != NULL && actual->VIPD.DNI != dni) {
+        *costo += 1.0; // Contamos la celda actual que no coincidió
         padre = actual;
         if (dni < actual->VIPD.DNI) {
             actual = actual->P_izq;
@@ -270,98 +276,93 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
         }
     }
 
-    // Si actual cayó a NULL, el elemento no está en el árbol
     if (actual == NULL) {
         *exito = 0;
-        return;
+        return; // Fracasó, termina aquí
     }
 
+    *costo += 1.0; // Contamos la celda final donde sí hubo éxito
 
+    // 2. Confirmación de identidad
     if (strcmp(actual->VIPD.Nombre_Apellido, a_eliminar.Nombre_Apellido) == 0 &&
         strcmp(actual->VIPD.Domicilio, a_eliminar.Domicilio) == 0 &&
         actual->VIPD.Cod_Postal == a_eliminar.Cod_Postal &&
         actual->VIPD.Mesa == a_eliminar.Mesa &&
         actual->VIPD.Circuito == a_eliminar.Circuito) {
 
-        //LoGICA DE DESCONEXIÓN
+        // LÓGICA DE DESCONEXIÓN
 
-        //caso1: El nodo es una hoja
+        // Caso 1: El nodo es una hoja
         if (actual->P_izq == NULL && actual->P_der == NULL) {
-            if (padre == NULL) {
-                *raiz = NULL; // Borramos la raíz si era el único nodo del árbol
-            } else if (padre->P_izq == actual) {
-                padre->P_izq = NULL; // Lo desenganchamos de la izquierda
-            } else {
-                padre->P_der = NULL; // Lo desenganchamos de la derecha
-            }
+            if (padre == NULL) *raiz = NULL;
+            else if (padre->P_izq == actual) padre->P_izq = NULL;
+            else padre->P_der = NULL;
+            
+            *costo += 0.5; // 1 modificación de puntero
             free(actual);
         }
 
-        //caso2: El nodo tiene un solo hijo
+        // Caso 2: El nodo tiene un solo hijo
         else if (actual->P_izq == NULL || actual->P_der == NULL) {
-            // Identificamos de qué lado está el "nieto" que debemos salvar
-            nodo_abb* hijo_unico = NULL;
-            if (actual->P_izq != NULL) {
-                hijo_unico = actual->P_izq;
-            } else {
-                hijo_unico = actual->P_der;
-            }
+            nodo_abb* hijo_unico = (actual->P_izq != NULL) ? actual->P_izq : actual->P_der;
 
-            // Hacemos el puenteo directo entre el abuelo (padre) y el nieto (hijo_unico)
-            if (padre == NULL) {
-                *raiz = hijo_unico; // Borramos la raíz, el hijo pasa a ser la nueva raíz
-            } else if (padre->P_izq == actual) {
-                padre->P_izq = hijo_unico;
-            } else {
-                padre->P_der = hijo_unico;
-            }
+            if (padre == NULL) *raiz = hijo_unico;
+            else if (padre->P_izq == actual) padre->P_izq = hijo_unico;
+            else padre->P_der = hijo_unico;
+            
+            *costo += 0.5; // 1 modificación de puntero (puenteo)
             free(actual);
         }
 
-        //caso3:El nodo tiene dos hijos
+        // Caso 3: El nodo tiene dos hijos
         else {
             nodo_abb* padre_reemplazo = actual;
-            nodo_abb* reemplazo = actual->P_izq; //1.buscamos en el subárbol izquierdo
+            nodo_abb* reemplazo = actual->P_izq;
+            
+            *costo += 1.0; // Consultamos el primer hijo izquierdo
 
-            //2.Viajamos todo hacia la derecha para encontrar al predecesor
+            // Buscamos el predecesor
             while (reemplazo->P_der != NULL) {
+                *costo += 1.0; // Consultamos cada celda en la bajada
                 padre_reemplazo = reemplazo;
                 reemplazo = reemplazo->P_der;
             }
 
-            //3.copiamos la información de la nupla y al nodo que queríamos borrar
+            // Copia de datos
             actual->VIPD = reemplazo->VIPD;
+            *costo += 1.0; // Costo por política de reemplazo (datos)
 
-            //4.Desconectamos físicamente al nodo reemplazo
+            // Desconexión física
             if (padre_reemplazo == actual) {
-                //Caso extremo:el reemplazo era el hijo izquierdo directo (no hubo que bajar a la derecha)
                 padre_reemplazo->P_izq = reemplazo->P_izq;
             } else {
                 padre_reemplazo->P_der = reemplazo->P_izq;
             }
+            
+            *costo += 0.5; // 1 modificación de puntero del reemplazo
             free(reemplazo);
         }
-
-
-
-
-}}
-
-//Evocación (in x, out y, out éxito)
-void Evocacion_ABB(int Dni_Busq, Elector* salida, nodo_abb* raiz, int* exito){
-
-int ext;
-nodo_abb* pos;
-
-Localizar_ABB(Dni_Busq, raiz, &pos, &ext);
-
-
-if(ext == 1){ //El elemento existe
-*salida = pos->VIPD;
-*exito = 1;
-} else{
-*exito = 0;
+        *exito = 1;
+    } else {
+        *exito = 0;
+    }
 }
+//Evocación (in x, out y, out éxito)
+void Evocacion_ABB(int Dni_Busq, Elector* salida, nodo_abb* raiz, int* exito, float* costo){
+    int ext;
+    nodo_abb* pos;
+    
+    *costo = 0.0; // Inicializamos el costo en cero
+
+    // Localizar_ABB sumará +1.0 por cada nodo que visite internamente
+    Localizar_ABB(Dni_Busq, raiz, &pos, &ext, costo);
+
+    if(ext == 1){ // El elemento existe
+        *salida = pos->VIPD; // La copia de datos de salida no suma costo según la regla
+        *exito = 1;
+    } else {
+        *exito = 0;
+    }
 }
 
 
@@ -508,7 +509,7 @@ int main(){
     Elector LSOBB[2200]; //apropocito le di de mas, por si se carga un archivo con 2003 personas, asi no revienta
     int cant_Elementos = 0;
 	int costo_LSOBB = 0;
-	int costo_ABB = 0;
+	float costo_ABB = 0;
 	int costo_LVO = 0;
 	//inicializamos ambos puntos a Null, despues hay que agregar el centinela a lvo
     nodo_lvo* Acc_LVO = NULL;
