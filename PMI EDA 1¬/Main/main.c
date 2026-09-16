@@ -50,7 +50,7 @@ typedef struct nodo_lvo {
 } nodo_lvo;
 
 //LOCALIZAR LVO
-//Localizar (in x, out pos, out éxito)
+//Localizar (in x, out pos, out Ã©xito)
 //El valor utilizado como +infinito en LVO es el numero  999.999.999.
 void Localizar_LVO(int dni_buscado, nodo_lvo* cabeza, nodo_lvo** pos, int* exito){
     nodo_lvo* aux = cabeza;
@@ -68,7 +68,7 @@ void Localizar_LVO(int dni_buscado, nodo_lvo* cabeza, nodo_lvo** pos, int* exito
     *pos = anterior; //DEVOLVEMOS LA POS PARA EL ALTA
 }
 
-//Alta (in x, in y, out éxito)
+//Alta (in x, in y, out Ã©xito)
 //doble puntero para cabeza porque si quiero almacenar en el primer elemento me dice que estoy haciend segmental fail
 void Alta_LVO(Elector nuevo, nodo_lvo** cabeza, int* exito){
     int dni_busc = nuevo.DNI;
@@ -96,7 +96,7 @@ void Alta_LVO(Elector nuevo, nodo_lvo** cabeza, int* exito){
     }
 }
 
-//Evocación ( in x, out y, out éxito)
+//EvocaciÃ³n ( in x, out y, out Ã©xito)
 void Evocacion_LVO(int Dni_Buscado, Elector* Elec_Buscado, nodo_lvo* cabeza, int* exito){
 
 nodo_lvo* Pos = NULL;
@@ -117,7 +117,7 @@ if(ext == 1){
 }
 
 
-//Baja ( in x, in y, out éxito)
+//Baja ( in x, in y, out Ã©xito)
 void Baja_LVO(Elector a_dar_de_baja, nodo_lvo** cabeza, int* exito) {
     int dni_busc = a_dar_de_baja.DNI;
     nodo_lvo* Pos = NULL;
@@ -127,7 +127,7 @@ void Baja_LVO(Elector a_dar_de_baja, nodo_lvo** cabeza, int* exito) {
 
     if (ext == 1) { // existe una nupla con ese x
 
-        // Identificamos cuál es el nodo a borrar
+        // Identificamos cuÃ¡l es el nodo a borrar
         nodo_lvo* a_eliminar = NULL;
         if (Pos == NULL) {
             a_eliminar = *cabeza;
@@ -194,7 +194,7 @@ typedef struct nodo_abb{
     struct nodo_abb* P_der;
 } nodo_abb;
 
-//Localizar (in x, out pos, out éxito)
+//Localizar (in x, out pos, out Ã©xito)
 void Localizar_ABB(int Dni_Buscado, nodo_abb* raiz, nodo_abb** pos, int* exito){
 nodo_abb* actual = raiz;
 nodo_abb* padre = NULL;
@@ -216,7 +216,7 @@ if (actual != NULL && actual->VIPD.DNI == Dni_Buscado){
 }
 
 
-//Alta (in x, in y, out éxito)
+//Alta (in x, in y, out Ã©xito)
 void Alta_ABB(Elector Nuevo,nodo_abb** raiz, int* exito){
 int dni = Nuevo.DNI;
 nodo_abb* pos;
@@ -254,13 +254,13 @@ if(ext == 0){ //no existe el elemento
 }
 }
 
-//Baja (in x, in y, out éxito)
+//Baja (in x, in y, out Ã©xito)
 void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
     int dni = a_eliminar.DNI;
     nodo_abb* actual = *raiz;
     nodo_abb* padre = NULL;
 
-    // 1. Búsqueda simultánea (avanzamos actual, pero retenemos al padre)
+    // 1. BÃºsqueda simultÃ¡nea (avanzamos actual, pero retenemos al padre)
     while (actual != NULL && actual->VIPD.DNI != dni) {
         padre = actual;
         if (dni < actual->VIPD.DNI) {
@@ -270,7 +270,7 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
         }
     }
 
-    // Si actual cayó a NULL, el elemento no está en el árbol
+    // Si actual cayÃ³ a NULL, el elemento no estÃ¡ en el Ã¡rbol
     if (actual == NULL) {
         *exito = 0;
         return;
@@ -283,12 +283,12 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
         actual->VIPD.Mesa == a_eliminar.Mesa &&
         actual->VIPD.Circuito == a_eliminar.Circuito) {
 
-        //LoGICA DE DESCONEXIÓN
+        //LoGICA DE DESCONEXIÃ“N
 
         //caso1: El nodo es una hoja
         if (actual->P_izq == NULL && actual->P_der == NULL) {
             if (padre == NULL) {
-                *raiz = NULL; // Borramos la raíz si era el único nodo del árbol
+                *raiz = NULL; // Borramos la raÃ­z si era el Ãºnico nodo del Ã¡rbol
             } else if (padre->P_izq == actual) {
                 padre->P_izq = NULL; // Lo desenganchamos de la izquierda
             } else {
@@ -299,7 +299,7 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
 
         //caso2: El nodo tiene un solo hijo
         else if (actual->P_izq == NULL || actual->P_der == NULL) {
-            // Identificamos de qué lado está el "nieto" que debemos salvar
+            // Identificamos de quÃ© lado estÃ¡ el "nieto" que debemos salvar
             nodo_abb* hijo_unico = NULL;
             if (actual->P_izq != NULL) {
                 hijo_unico = actual->P_izq;
@@ -309,7 +309,7 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
 
             // Hacemos el puenteo directo entre el abuelo (padre) y el nieto (hijo_unico)
             if (padre == NULL) {
-                *raiz = hijo_unico; // Borramos la raíz, el hijo pasa a ser la nueva raíz
+                *raiz = hijo_unico; // Borramos la raÃ­z, el hijo pasa a ser la nueva raÃ­z
             } else if (padre->P_izq == actual) {
                 padre->P_izq = hijo_unico;
             } else {
@@ -321,7 +321,7 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
         //caso3:El nodo tiene dos hijos
         else {
             nodo_abb* padre_reemplazo = actual;
-            nodo_abb* reemplazo = actual->P_izq; //1.buscamos en el subárbol izquierdo
+            nodo_abb* reemplazo = actual->P_izq; //1.buscamos en el subÃ¡rbol izquierdo
 
             //2.Viajamos todo hacia la derecha para encontrar al predecesor
             while (reemplazo->P_der != NULL) {
@@ -329,10 +329,10 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
                 reemplazo = reemplazo->P_der;
             }
 
-            //3.copiamos la información de la nupla y al nodo que queríamos borrar
+            //3.copiamos la informaciÃ³n de la nupla y al nodo que querÃ­amos borrar
             actual->VIPD = reemplazo->VIPD;
 
-            //4.Desconectamos físicamente al nodo reemplazo
+            //4.Desconectamos fÃ­sicamente al nodo reemplazo
             if (padre_reemplazo == actual) {
                 //Caso extremo:el reemplazo era el hijo izquierdo directo (no hubo que bajar a la derecha)
                 padre_reemplazo->P_izq = reemplazo->P_izq;
@@ -347,7 +347,7 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito) {
 
 }}
 
-//Evocación (in x, out y, out éxito)
+//EvocaciÃ³n (in x, out y, out Ã©xito)
 void Evocacion_ABB(int Dni_Busq, Elector* salida, nodo_abb* raiz, int* exito){
 
 int ext;
@@ -376,41 +376,45 @@ if(ext == 1){ //El elemento existe
 //===========================================================================================================================
 
 //Localizacion
-//Localizar (in x, out pos, out éxito)
-void Localizar_LSOBB(int dni_buscado, Elector LSOBB[], int cant_elementos, int* pos, int* exito) {
+//Localizar (in x, out pos, out Ã©xito)
+void Localizar_LSOBB(int dni_buscado, Elector LSOBB[], int cant_elementos, int* pos, int* exito, int* costo) {
     int li = 0;
     int ls = cant_elementos - 1;
-    int m = (li + ls) / 2;
+    int m = (li + ls + 1) / 2;
+    *costo = 0;
 
     while (li <= ls && LSOBB[m].DNI != dni_buscado) {
+        *costo = *costo + 1; // se consultÃ³ la celda m (!=)
+
         if (LSOBB[m].DNI < dni_buscado) {
-            li = m + 1; // Descartamos la mitad izq
+            li = m + 1;
         } else {
-            ls = m - 1; // Descartamos la mitad der
+            ls = m - 1;
         }
-        m = (li + ls) / 2; // Recalculamos el medio
+        m = (li + ls) / 2;
     }
 
-    // Al salir, verificamos por qué se detuvo el while
     if (li <= ls) {
+        *costo = *costo + 1; 
         *exito = 1;
-        *pos = m;  // Devuelve el índice exacto donde está
+        *pos = m;
     } else {
         *exito = 0;
-        *pos = li; // Devuelve la posición donde DEBERÍA ir para mantener el orden
+        *pos = li;
     }
 }
 
-
 //Alta
-//Alta (in x, in y, out éxito)
-void Alta_LSOBB(Elector Nuevo, Elector LSOBB[], int* cant_Elementos,int* exito){
+//Alta (in x, in y, out Ã©xito)
+void Alta_LSOBB(Elector Nuevo, Elector LSOBB[], int* cant_Elementos,int* exito, int* costo){
 
 int dni_busq = Nuevo.DNI;
 int pos;
 int ext;
 
-Localizar_LSOBB(dni_busq, LSOBB, *cant_Elementos, &pos ,&ext);
+*costo = 0;
+
+Localizar_LSOBB(dni_busq, LSOBB, *cant_Elementos, &pos ,&ext, costo);
 
 if(ext == 1){
    //El elemento ya existe
@@ -420,7 +424,8 @@ if(ext == 1){
     int i;
     for (i = *cant_Elementos - 1; i >= pos; i--){
         LSOBB[i+1] = LSOBB[i];
-    }
+    	*costo = *costo + 1;
+	}
     LSOBB[pos] = Nuevo;
     *cant_Elementos = *cant_Elementos + 1;
     *exito = 1;
@@ -430,11 +435,11 @@ if(ext == 1){
 
 //Baja
 //Baja (in x, in y, out exito)
-void Baja_LSOBB(Elector a_eliminar, Elector LSOBB[], int* cant_Elem, int* exito){
+void Baja_LSOBB(Elector a_eliminar, Elector LSOBB[], int* cant_Elem, int* exito, int* costo){
     int ext;
     int pos;
-
-    Localizar_LSOBB(a_eliminar.DNI, LSOBB, *cant_Elem, &pos, &ext);
+	*costo = 0;
+    Localizar_LSOBB(a_eliminar.DNI, LSOBB, *cant_Elem, &pos, &ext, costo);
 
     if(ext == 1){
         if (strcmp(LSOBB[pos].Nombre_Apellido, a_eliminar.Nombre_Apellido) == 0 &&
@@ -446,7 +451,8 @@ void Baja_LSOBB(Elector a_eliminar, Elector LSOBB[], int* cant_Elem, int* exito)
             int i;
             for (i = pos; i < *cant_Elem - 1; i++){
                 LSOBB[i] = LSOBB[i + 1];
-            }
+            	*costo = *costo + 1;
+			}
 
             *cant_Elem = *cant_Elem - 1;
             *exito = 1;
@@ -461,12 +467,12 @@ void Baja_LSOBB(Elector a_eliminar, Elector LSOBB[], int* cant_Elem, int* exito)
 
 
 //Evocacion
-//Evocación (in x, out y, out éxito)
-void Evocacion_LSOBB(int Dni_Busq, Elector LSOBB[], Elector* Salida, int cant_Elem, int* exito){
+//EvocaciÃ³n (in x, out y, out Ã©xito)
+void Evocacion_LSOBB(int Dni_Busq, Elector LSOBB[], Elector* Salida, int cant_Elem, int* exito, int* costo){
     int ext;
     int pos;
 
-    Localizar_LSOBB(Dni_Busq, LSOBB, cant_Elem, &pos, &ext);
+    Localizar_LSOBB(Dni_Busq, LSOBB, cant_Elem, &pos, &ext, costo);
 
     if(ext == 1){
         *Salida = LSOBB[pos];
@@ -487,7 +493,7 @@ void Evocacion_LSOBB(int Dni_Busq, Elector LSOBB[], Elector* Salida, int cant_El
 
 
 
-// Función mayus
+// FunciÃ³n mayus
 void mayusc(char* cadena) {
     int i = 0;
     while (cadena[i] != '\0') {
@@ -497,10 +503,14 @@ void mayusc(char* cadena) {
 }
 
 
+
 int main(){
     Elector LSOBB[2200]; //apropocito le di de mas, por si se carga un archivo con 2003 personas, asi no revienta
     int cant_Elementos = 0;
-    //inicializamos ambos puntos a Null, despues hay que agregar el centinela a lvo
+	int costo_LSOBB = 0;
+	int costo_ABB = 0;
+	int costo_LVO = 0;
+	//inicializamos ambos puntos a Null, despues hay que agregar el centinela a lvo
     nodo_lvo* Acc_LVO = NULL;
     nodo_abb* Raiz_ABB = NULL;
 
@@ -517,7 +527,7 @@ int main(){
 //===========================================================================================================================
 //===========================================================================================================================
     /*
-    1. Comparación de estructuras.
+    1. ComparaciÃ³n de estructuras.
     2. Mostrar Estructura LVO.
     3. Mostrar Estructura LSOBB.
     4. Mostrar Estructura ABB.
@@ -589,8 +599,8 @@ int main(){
             Evocacion_ABB(temp.DNI, &recup_ABB, Raiz_ABB, &ext2);
             Evocacion_LSOBB(temp.DNI, LSOBB, &recup_LSOBB, cant_Elementos, &ext3);
             if(ext1 == 1 && ext2 == 1){
-                // La teoria prohíbe imprimir ADENTRO de la función,
-                // por lo que imprimimos aquí en el main:
+                // La teoria prohÃ­be imprimir ADENTRO de la funciÃ³n,
+                // por lo que imprimimos aquÃ­ en el main:
                 // printf("Encontrado: %s\n", recup_ABB.Nombre_Apellido);
             }
         }
