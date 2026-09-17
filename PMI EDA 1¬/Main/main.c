@@ -22,8 +22,26 @@ typedef struct {
     int Circuito;
 } Elector;
 
+typedef struct {
+    // ALTAS (Solo exitosas)
+    float costo_total_alta;
+    int cant_alta_exito;
+    float max_alta;
 
+    // BAJAS (Solo exitosas)
+    float costo_total_baja;
+    int cant_baja_exito;
+    float max_baja;
 
+    // EVOCACIONES (Separadas en Exito y Fracaso)
+    float costo_total_evo_exito;
+    int cant_evo_exito;
+    float max_evo_exito;
+
+    float costo_total_evo_fracaso;
+    int cant_evo_fracaso;
+    float max_evo_fracaso;
+} Metricas;
 
 
 
@@ -51,114 +69,105 @@ typedef struct nodo_lvo {
 
 //LOCALIZAR LVO
 //Localizar (in x, out pos, out éxito)
-//El valor utilizado como +infinito en LVO es el numero  999.999.999.
-void Localizar_LVO(int dni_buscado, nodo_lvo* cabeza, nodo_lvo** pos, int* exito){
+// Localizar LVO
+void Localizar_LVO(int dni_buscado, nodo_lvo* cabeza, nodo_lvo** pos, int* exito, float* costo_busq) {
     nodo_lvo* aux = cabeza;
-    nodo_lvo* anterior = NULL; //Para saber donde insertar dsp.
+    nodo_lvo* anterior = NULL;
+    *costo_busq = 0.0;
 
-    while(aux->VIPD.DNI < dni_buscado){
+    while(aux->VIPD.DNI < dni_buscado) {
+        *costo_busq += 1.0;
         anterior = aux;
-        aux= aux->PS;
+        aux = aux->PS;
     }
-    if (aux->VIPD.DNI == dni_buscado) {
-        *exito = 1; //EXITO
-    } else {
-        *exito = 0; //DERROTA
-    }
-    *pos = anterior; //DEVOLVEMOS LA POS PARA EL ALTA
+
+    *costo_busq += 1.0;
+
+    if (aux->VIPD.DNI == dni_buscado) *exito = 1;
+    else *exito = 0;
+
+    *pos = anterior;
 }
 
-//Alta (in x, in y, out éxito)
-//doble puntero para cabeza porque si quiero almacenar en el primer elemento me dice que estoy haciend segmental fail
-void Alta_LVO(Elector nuevo, nodo_lvo** cabeza, int* exito){
-    int dni_busc = nuevo.DNI;
+// Alta LVO
+void Alta_LVO(Elector nuevo, nodo_lvo** cabeza, int* exito, float* costo_estructural) {
     nodo_lvo* Pos = NULL;
     int ext;
-    Localizar_LVO(dni_busc, *cabeza, &Pos, &ext);
-    if (ext == 1){
-        *exito = 0;
-    }else{
-        nodo_lvo* nuevo_nodo = (nodo_lvo*)malloc(sizeof(nodo_lvo)); //vemos si hay espacio
+    float costo_busq = 0;
 
-        if(nuevo_nodo != NULL){
+    Localizar_LVO(nuevo.DNI, *cabeza, &Pos, &ext, &costo_busq);
+    *costo_estructural = 0.0;
+
+    if (ext == 1) {
+        *exito = 0;
+    } else {
+        nodo_lvo* nuevo_nodo = (nodo_lvo*)malloc(sizeof(nodo_lvo));
+        if(nuevo_nodo != NULL) {
             nuevo_nodo->VIPD = nuevo;
-            //SI Pos=NULL significa que la lista estaba vacia o inserto por el primer elemento
-            if (Pos == NULL){
+
+            if (Pos == NULL) {
                 nuevo_nodo->PS = *cabeza;
                 *cabeza = nuevo_nodo;
-            }else{
-            nuevo_nodo->PS = Pos->PS;
-            Pos->PS = nuevo_nodo;
-            *exito = 1; //exito total
-        }}else{
-            *exito = 2; //no hay espacio
+            } else {
+                nuevo_nodo->PS = Pos->PS;
+                Pos->PS = nuevo_nodo;
+            }
+
+            *costo_estructural += 1.0;
+            *exito = 1;
+        } else {
+            *exito = 2;
         }
     }
 }
 
-//Evocación ( in x, out y, out éxito)
-void Evocacion_LVO(int Dni_Buscado, Elector* Elec_Buscado, nodo_lvo* cabeza, int* exito){
-
-nodo_lvo* Pos = NULL;
-int ext;
-
-Localizar_LVO(Dni_Buscado,cabeza, &Pos,&ext);
-
-if(ext == 1){
-    if(Pos == NULL){ //Esta cond es por si el elemento es el primero de la lista, Pos es el anterior, el dni buscado esta en Pos->PS
-        *Elec_Buscado = cabeza->VIPD;
-    }else{
-        *Elec_Buscado = Pos->PS->VIPD;
-    }
-    *exito = 1;
-}else{
-    *exito = 0;
-    }
-}
-
-
-//Baja ( in x, in y, out éxito)
-void Baja_LVO(Elector a_dar_de_baja, nodo_lvo** cabeza, int* exito) {
-    int dni_busc = a_dar_de_baja.DNI;
+// Baja LVO
+void Baja_LVO(Elector a_dar_de_baja, nodo_lvo** cabeza, int* exito, float* costo_estructural) {
     nodo_lvo* Pos = NULL;
     int ext;
+    float costo_busq = 0;
 
-    Localizar_LVO(dni_busc, *cabeza, &Pos, &ext);
+    Localizar_LVO(a_dar_de_baja.DNI, *cabeza, &Pos, &ext, &costo_busq);
+    *costo_estructural = 0.0;
 
-    if (ext == 1) { // existe una nupla con ese x
+    if (ext == 1) {
+        nodo_lvo* a_eliminar = (Pos == NULL) ? *cabeza : Pos->PS;
 
-        // Identificamos cuál es el nodo a borrar
-        nodo_lvo* a_eliminar = NULL;
-        if (Pos == NULL) {
-            a_eliminar = *cabeza;
-        } else {
-            a_eliminar = Pos->PS;
-        }
-
-
-	    if (strcmp(a_eliminar->VIPD.Nombre_Apellido, a_dar_de_baja.Nombre_Apellido) == 0 &&
+        if (strcmp(a_eliminar->VIPD.Nombre_Apellido, a_dar_de_baja.Nombre_Apellido) == 0 &&
             strcmp(a_eliminar->VIPD.Domicilio, a_dar_de_baja.Domicilio) == 0 &&
             a_eliminar->VIPD.Cod_Postal == a_dar_de_baja.Cod_Postal &&
             a_eliminar->VIPD.Mesa == a_dar_de_baja.Mesa &&
             a_eliminar->VIPD.Circuito == a_dar_de_baja.Circuito) {
 
-                   if (Pos == NULL) {
-                *cabeza = a_eliminar->PS; // Si era el primero, la cabeza avanza
-            } else {
-                Pos->PS = a_eliminar->PS; // Puenteamos el nodo a eliminar
-            }
+            if (Pos == NULL) *cabeza = a_eliminar->PS;
+            else Pos->PS = a_eliminar->PS;
 
-            free(a_eliminar); // Liberamos la memoria RAM
+            *costo_estructural += 0.5;
+            free(a_eliminar);
             *exito = 1;
-
         } else {
-            *exito = 0; // Fracasa: El DNI existe pero los otros datos no coinciden
+            *exito = 0;
         }
     } else {
-        *exito = 0; // Fracasa: no hay una nupla con ese x
+        *exito = 0;
     }
 }
 
+// Evocacion LVO
+void Evocacion_LVO(int Dni_Buscado, Elector* Elec_Buscado, nodo_lvo* cabeza, int* exito, float* costo_busq) {
+    nodo_lvo* Pos = NULL;
+    int ext;
+
+    Localizar_LVO(Dni_Buscado, cabeza, &Pos, &ext, costo_busq);
+
+    if(ext == 1) {
+        if(Pos == NULL) *Elec_Buscado = cabeza->VIPD;
+        else *Elec_Buscado = Pos->PS->VIPD;
+        *exito = 1;
+    } else {
+        *exito = 0;
+    }
+}
 
 void Init_LVO(nodo_lvo** cabeza) {
     *cabeza = (nodo_lvo*)malloc(sizeof(nodo_lvo));
@@ -195,151 +204,121 @@ typedef struct nodo_abb{
 } nodo_abb;
 
 //Localizar (in x, out pos, out éxito)
-void Localizar_ABB(int Dni_Buscado, nodo_abb* raiz, nodo_abb** pos, int* exito, float* costo){
-nodo_abb* actual = raiz;
-nodo_abb* padre = NULL;
-*costo = 0.0;
+// Localizar ABB
+void Localizar_ABB(int Dni_Buscado, nodo_abb* raiz, nodo_abb** pos, int* exito, float* costo_busq) {
+    nodo_abb* actual = raiz;
+    nodo_abb* padre = NULL;
+    *costo_busq = 0.0;
 
-while(actual != NULL && Dni_Buscado != actual->VIPD.DNI){
-    *costo = *costo + 1;    
-	padre = actual;
-        if(actual->VIPD.DNI > Dni_Buscado){ //Debo de ir por la izq si el actual es > buscado
-            actual = actual->P_izq;
-        }else{
-            actual = actual->P_der;
-        }
-}
-if (actual != NULL){
-    *costo = *costo + 1;
-	*exito = 1;
-    *pos = actual;
-}else{
-    *exito = 0;
-    *pos = padre;}
-}
-
-
-//Alta (in x, in y, out éxito)
-void Alta_ABB(Elector Nuevo,nodo_abb** raiz, int* exito,float* costo){
-int dni = Nuevo.DNI;
-nodo_abb* pos;
-int ext;
-*costo = 0;
-
-Localizar_ABB(dni,*raiz,&pos,&ext, costo);
-
-if(ext == 0){ //no existe el elemento
-    nodo_abb* nuevo_nodo = (nodo_abb*)malloc(sizeof(nodo_abb)); //vemos si hay espacio
-    if(nuevo_nodo != NULL){
-    //HAY ESPACIO TODAVIA
-        nuevo_nodo->VIPD = Nuevo;
-        nuevo_nodo->P_izq = NULL;
-        nuevo_nodo->P_der = NULL;
-
-        if(pos == NULL){
-            //Arbol vacio
-            *raiz = nuevo_nodo;
-			*costo = *costo + 0.5;
-        }else{
-            if(pos->VIPD.DNI > dni){
-                pos->P_izq = nuevo_nodo;
-            }else{
-                pos->P_der = nuevo_nodo;
-            }
-        	*costo = *costo + 0.5;
-		}
-    *exito = 1;
-    } else{
-    //NO HAY ESPACIO
-   *exito = 2;
+    while(actual != NULL && Dni_Buscado != actual->VIPD.DNI) {
+        *costo_busq += 1.0;
+        padre = actual;
+        if(actual->VIPD.DNI > Dni_Buscado) actual = actual->P_izq;
+        else actual = actual->P_der;
     }
-    }else{
-    *exito = 0; //dni ya existe
-}
+
+    if (actual != NULL) {
+        *costo_busq += 1.0; // Consulta final exitosa
+        *exito = 1;
+        *pos = actual;
+    } else {
+        *exito = 0;
+        *pos = padre;
+    }
 }
 
-//Baja (in x, in y, out éxito)
-void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito, float* costo) {
+// Alta ABB
+void Alta_ABB(Elector Nuevo, nodo_abb** raiz, int* exito, float* costo_estructural) {
+    nodo_abb* pos;
+    int ext;
+    float costo_busq = 0;
+
+    Localizar_ABB(Nuevo.DNI, *raiz, &pos, &ext, &costo_busq);
+    *costo_estructural = 0.0; // Aislamos modificaciones de punteros
+
+    if(ext == 0) {
+        nodo_abb* nuevo_nodo = (nodo_abb*)malloc(sizeof(nodo_abb));
+        if(nuevo_nodo != NULL) {
+            nuevo_nodo->VIPD = Nuevo;
+            nuevo_nodo->P_izq = NULL;
+            nuevo_nodo->P_der = NULL;
+
+            if(pos == NULL) {
+                *raiz = nuevo_nodo;
+            } else {
+                if(pos->VIPD.DNI > Nuevo.DNI) pos->P_izq = nuevo_nodo;
+                else pos->P_der = nuevo_nodo;
+            }
+            *costo_estructural += 0.5; // 1 conexión de puntero
+            *exito = 1;
+        } else {
+            *exito = 2; // Sin espacio
+        }
+    } else {
+        *exito = 0;
+    }
+}
+
+// Baja ABB
+void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito, float* costo_estructural) {
     int dni = a_eliminar.DNI;
     nodo_abb* actual = *raiz;
     nodo_abb* padre = NULL;
-    *costo = 0.0; 
+    *costo_estructural = 0.0;
 
-    // 1. Búsqueda simultánea (Costo de consulta: +1 por celda)
+
     while (actual != NULL && actual->VIPD.DNI != dni) {
-        *costo += 1.0; // Contamos la celda actual que no coincidió
         padre = actual;
-        if (dni < actual->VIPD.DNI) {
-            actual = actual->P_izq;
-        } else {
-            actual = actual->P_der;
-        }
+        if (dni < actual->VIPD.DNI) actual = actual->P_izq;
+        else actual = actual->P_der;
     }
 
     if (actual == NULL) {
         *exito = 0;
-        return; // Fracasó, termina aquí
+        return;
     }
 
-    *costo += 1.0; // Contamos la celda final donde sí hubo éxito
-
-    // 2. Confirmación de identidad
+    // Confirmación
     if (strcmp(actual->VIPD.Nombre_Apellido, a_eliminar.Nombre_Apellido) == 0 &&
         strcmp(actual->VIPD.Domicilio, a_eliminar.Domicilio) == 0 &&
         actual->VIPD.Cod_Postal == a_eliminar.Cod_Postal &&
         actual->VIPD.Mesa == a_eliminar.Mesa &&
         actual->VIPD.Circuito == a_eliminar.Circuito) {
 
-        // LÓGICA DE DESCONEXIÓN
-
-        // Caso 1: El nodo es una hoja
+        // Caso 1: Hoja
         if (actual->P_izq == NULL && actual->P_der == NULL) {
             if (padre == NULL) *raiz = NULL;
             else if (padre->P_izq == actual) padre->P_izq = NULL;
             else padre->P_der = NULL;
-            
-            *costo += 0.5; // 1 modificación de puntero
+            *costo_estructural += 0.5;
             free(actual);
         }
-
-        // Caso 2: El nodo tiene un solo hijo
+        // Caso2: un hijo
         else if (actual->P_izq == NULL || actual->P_der == NULL) {
             nodo_abb* hijo_unico = (actual->P_izq != NULL) ? actual->P_izq : actual->P_der;
-
             if (padre == NULL) *raiz = hijo_unico;
             else if (padre->P_izq == actual) padre->P_izq = hijo_unico;
             else padre->P_der = hijo_unico;
-            
-            *costo += 0.5; // 1 modificación de puntero (puenteo)
+            *costo_estructural += 0.5;
             free(actual);
         }
-
-        // Caso 3: El nodo tiene dos hijos
+        // Caso 3: dos hijos Política de reemplazo
         else {
             nodo_abb* padre_reemplazo = actual;
-            nodo_abb* reemplazo = actual->P_izq;
-            
-            *costo += 1.0; // Consultamos el primer hijo izquierdo
+            nodo_abb* reemplazo = actual->P_izq; // Menor de los mayores (buscamos predecesor)
 
-            // Buscamos el predecesor
             while (reemplazo->P_der != NULL) {
-                *costo += 1.0; // Consultamos cada celda en la bajada
                 padre_reemplazo = reemplazo;
                 reemplazo = reemplazo->P_der;
             }
 
-            // Copia de datos
             actual->VIPD = reemplazo->VIPD;
-            *costo += 1.0; // Costo por política de reemplazo (datos)
+            *costo_estructural += 1.0; // Costo de copia de datos
 
-            // Desconexión física
-            if (padre_reemplazo == actual) {
-                padre_reemplazo->P_izq = reemplazo->P_izq;
-            } else {
-                padre_reemplazo->P_der = reemplazo->P_izq;
-            }
-            
-            *costo += 0.5; // 1 modificación de puntero del reemplazo
+            if (padre_reemplazo == actual) padre_reemplazo->P_izq = reemplazo->P_izq;
+            else padre_reemplazo->P_der = reemplazo->P_izq;
+
+            *costo_estructural += 0.5; // Desconexión de puntero
             free(reemplazo);
         }
         *exito = 1;
@@ -347,22 +326,16 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito, float* costo) {
         *exito = 0;
     }
 }
-//Evocación (in x, out y, out éxito)
-void Evocacion_ABB(int Dni_Busq, Elector* salida, nodo_abb* raiz, int* exito, float* costo){
+
+// Evocacion ABB (la que ya habíamos armado)
+void Evocacion_ABB(int Dni_Busq, Elector* salida, nodo_abb* raiz, int* exito, float* costo_busq) {
     int ext;
     nodo_abb* pos;
-    
-    *costo = 0.0; // Inicializamos el costo en cero
-
-    // Localizar_ABB sumará +1.0 por cada nodo que visite internamente
-    Localizar_ABB(Dni_Busq, raiz, &pos, &ext, costo);
-
-    if(ext == 1){ // El elemento existe
-        *salida = pos->VIPD; // La copia de datos de salida no suma costo según la regla
+    Localizar_ABB(Dni_Busq, raiz, &pos, &ext, costo_busq);
+    if(ext == 1) {
+        *salida = pos->VIPD;
         *exito = 1;
-    } else {
-        *exito = 0;
-    }
+    } else *exito = 0;
 }
 
 
@@ -378,111 +351,107 @@ void Evocacion_ABB(int Dni_Busq, Elector* salida, nodo_abb* raiz, int* exito, fl
 
 //Localizacion
 //Localizar (in x, out pos, out éxito)
-void Localizar_LSOBB(int dni_buscado, Elector LSOBB[], int cant_elementos, int* pos, int* exito, int* costo) {
+void Localizar_LSOBB(int dni_buscado, Elector LSOBB[], int cant_elementos, int* pos, int* exito, int* costo_busq) {
+
+   if (cant_elementos == 0) {
+        *exito = 0;
+        *pos = 0;
+        return;
+    }
+
     int li = 0;
     int ls = cant_elementos - 1;
     int m = (li + ls + 1) / 2;
-    *costo = 0;
+    *costo_busq = 0;
 
-    while (li <= ls && LSOBB[m].DNI != dni_buscado) {
-        *costo = *costo + 1; // se consultó la celda m (!=)
+   while (li < ls) {
+        int m = (li + ls) / 2;
+        *costo_busq += 1;
 
         if (LSOBB[m].DNI < dni_buscado) {
             li = m + 1;
         } else {
-            ls = m - 1;
+            ls = m;
         }
-        m = (li + ls) / 2;
     }
-
-    if (li <= ls) {
-        *costo = *costo + 1; 
+    *costo_busq += 1;
+    if (LSOBB[li].DNI == dni_buscado) {
         *exito = 1;
-        *pos = m;
+        *pos = li;
     } else {
         *exito = 0;
-        *pos = li;
+        // Si no lo encontro indicamos dónde deberia ir para el ALTAA
+        if (LSOBB[li].DNI < dni_buscado) *pos = li + 1;
+        else *pos = li;
     }
 }
 
-//Alta
-//Alta (in x, in y, out éxito)
-void Alta_LSOBB(Elector Nuevo, Elector LSOBB[], int* cant_Elementos,int* exito, int* costo){
+void Alta_LSOBB(Elector Nuevo, Elector LSOBB[], int* cant_Elementos, int* exito, int* costo_estructural) {
+    int pos, ext;
+    int costo_busq = 0; // Variable temporal
 
-int dni_busq = Nuevo.DNI;
-int pos;
-int ext;
+    Localizar_LSOBB(Nuevo.DNI, LSOBB, *cant_Elementos, &pos, &ext, &costo_busq);
 
-*costo = 0;
+    *costo_estructural = 0;
 
-Localizar_LSOBB(dni_busq, LSOBB, *cant_Elementos, &pos ,&ext, costo);
-
-if(ext == 1){
-   //El elemento ya existe
-   *exito = 0;
-}else{
-    //tengo que correr todo lo que esta a la der un lugar para hacer espacio al nuevo element
-    int i;
-    for (i = *cant_Elementos - 1; i >= pos; i--){
-        LSOBB[i+1] = LSOBB[i];
-    	*costo = *costo + 1;
-	}
-    LSOBB[pos] = Nuevo;
-    *cant_Elementos = *cant_Elementos + 1;
-    *exito = 1;
-}
+    if(ext == 1) {
+        *exito = 0;
+    } else {
+        for (int i = *cant_Elementos - 1; i >= pos; i--) {
+            LSOBB[i+1] = LSOBB[i];
+            *costo_estructural += 1;
+        }
+        LSOBB[pos] = Nuevo;
+        *cant_Elementos += 1;
+        *exito = 1;
+    }
 }
 
+// Baja LSOBB
+void Baja_LSOBB(Elector a_eliminar, Elector LSOBB[], int* cant_Elem, int* exito, int* costo_estructural) {
+    int ext, pos;
+    int costo_busq = 0;
 
-//Baja
-//Baja (in x, in y, out exito)
-void Baja_LSOBB(Elector a_eliminar, Elector LSOBB[], int* cant_Elem, int* exito, int* costo){
-    int ext;
-    int pos;
-	*costo = 0;
-    Localizar_LSOBB(a_eliminar.DNI, LSOBB, *cant_Elem, &pos, &ext, costo);
+    Localizar_LSOBB(a_eliminar.DNI, LSOBB, *cant_Elem, &pos, &ext, &costo_busq);
 
-    if(ext == 1){
+    *costo_estructural = 0; // Arranca en 0
+
+    if(ext == 1) {
         if (strcmp(LSOBB[pos].Nombre_Apellido, a_eliminar.Nombre_Apellido) == 0 &&
             strcmp(LSOBB[pos].Domicilio, a_eliminar.Domicilio) == 0 &&
             LSOBB[pos].Cod_Postal == a_eliminar.Cod_Postal &&
             LSOBB[pos].Mesa == a_eliminar.Mesa &&
             LSOBB[pos].Circuito == a_eliminar.Circuito) {
 
-            int i;
-            for (i = pos; i < *cant_Elem - 1; i++){
+            // Corrimientos físicos hacia la izquierda
+            for (int i = pos; i < *cant_Elem - 1; i++) {
                 LSOBB[i] = LSOBB[i + 1];
-            	*costo = *costo + 1;
-			}
-
-            *cant_Elem = *cant_Elem - 1;
+                *costo_estructural += 1;
+            }
+            *cant_Elem -= 1;
             *exito = 1;
         } else {
             *exito = 0;
         }
     } else {
-
         *exito = 0;
     }
 }
 
+// Evocación LSOBB
+void Evocacion_LSOBB(int Dni_Busq, Elector LSOBB[], Elector* Salida, int cant_Elem, int* exito, int* costo_busq) {
+    int ext, pos;
+    *costo_busq = 0;
 
-//Evocacion
-//Evocación (in x, out y, out éxito)
-void Evocacion_LSOBB(int Dni_Busq, Elector LSOBB[], Elector* Salida, int cant_Elem, int* exito, int* costo){
-    int ext;
-    int pos;
+    Localizar_LSOBB(Dni_Busq, LSOBB, cant_Elem, &pos, &ext, costo_busq);
 
-    Localizar_LSOBB(Dni_Busq, LSOBB, cant_Elem, &pos, &ext, costo);
-
-    if(ext == 1){
+    if(ext == 1) {
         *Salida = LSOBB[pos];
         *exito = 1;
     } else {
         *exito = 0;
     }
 }
-
 
 
 
@@ -508,14 +477,18 @@ void mayusc(char* cadena) {
 int main(){
     Elector LSOBB[2200]; //apropocito le di de mas, por si se carga un archivo con 2003 personas, asi no revienta
     int cant_Elementos = 0;
-	int costo_LSOBB = 0;
-	float costo_ABB = 0;
-	int costo_LVO = 0;
-	//inicializamos ambos puntos a Null, despues hay que agregar el centinela a lvo
     nodo_lvo* Acc_LVO = NULL;
     nodo_abb* Raiz_ABB = NULL;
 
     Init_LVO(&Acc_LVO);
+
+
+
+    Metricas met_LVO = {0};
+    Metricas met_ABB = {0};
+    Metricas met_LSO = {0};
+
+
 
 
 
@@ -527,12 +500,8 @@ int main(){
 //========================================================MENU===============================================================
 //===========================================================================================================================
 //===========================================================================================================================
-    /*
-    1. Comparación de estructuras.
-    2. Mostrar Estructura LVO.
-    3. Mostrar Estructura LSOBB.
-    4. Mostrar Estructura ABB.
-    */
+
+
     int opcion;
 
     do{
@@ -544,12 +513,19 @@ int main(){
         printf("Ingrese una opcion: ");
         scanf("%d", &opcion);
         switch(opcion) {
-            case 1:
-                  printf("Datos cargados con exito...\n");
+
+
+
+
+
+            case 1:{
+
     //=========================================================================
     //=============================leer el archivo=============================
     int cod_operacion;
     Elector temp;
+    Elector recup_LVO, recup_ABB, recup_LSOBB;
+
     FILE *archivo = fopen("Operaciones_Padron.txt", "r");
 
     if(archivo == NULL){
@@ -571,44 +547,235 @@ int main(){
         fscanf(archivo, "%d", &temp.Circuito);
 
 
-	int ext1, ext2, ext3;
+        //Costos temps
+        int ext1, ext2, ext3;
+        int costo_LSOBB = 0;
+        float costo_ABB = 0.0;
+        float costo_LVO = 0.0;
 
-        if (cod_operacion == 1) { // ALTA
-            Alta_LVO(temp, &Acc_LVO, &ext1);
-            Alta_ABB(temp, &Raiz_ABB, &ext2);
-            Alta_LSOBB(temp, LSOBB, &cant_Elementos, &ext3);
 
-            if(ext1 == 1 && ext2 == 1 && ext3 == 1){
-                printf("Carga exitosa.\n");
-            } else {
-                printf("Algo salio mal bro.\n");
-            }
 
-        } else if (cod_operacion == 2) { // BAJA
-            Baja_LVO(temp, &Acc_LVO, &ext1);
-            Baja_ABB(temp, &Raiz_ABB, &ext2);
-            Baja_LSOBB(temp, LSOBB, &cant_Elementos, &ext3);
+        switch(cod_operacion) {
+            // ALTA
+            case 1:
+                // --- LVO ---
+                Alta_LVO(temp, &Acc_LVO, &ext1, &costo_LVO);
+                if (ext1 == 1) {
+                    met_LVO.costo_total_alta += costo_LVO;
+                    met_LVO.cant_alta_exito++;
 
-            if(ext1 == 1 && ext2 == 1){
-                printf("Baja exitosa.\n");
-            }
+                    // --- CHEQUEO DEL MÁXIMO ---
+                    if (costo_LVO > met_LVO.max_alta) {
+                        met_LVO.max_alta = costo_LVO;
+                    }
+                }
 
-        } else if (cod_operacion == 3) { // EVOCACION
-            Elector recup_LVO, recup_ABB, recup_LSOBB;
+                // --- ABB ---
+                Alta_ABB(temp, &Raiz_ABB, &ext2, &costo_ABB);
+                if (ext2 == 1) {
+                    met_ABB.costo_total_alta += costo_ABB;
+                    met_ABB.cant_alta_exito++;
 
-            Evocacion_LVO(temp.DNI, &recup_LVO, Acc_LVO, &ext1);
-            Evocacion_ABB(temp.DNI, &recup_ABB, Raiz_ABB, &ext2);
-            Evocacion_LSOBB(temp.DNI, LSOBB, &recup_LSOBB, cant_Elementos, &ext3);
-            if(ext1 == 1 && ext2 == 1){
-                // La teoria prohíbe imprimir ADENTRO de la función,
-                // por lo que imprimimos aquí en el main:
-                // printf("Encontrado: %s\n", recup_ABB.Nombre_Apellido);
+                    // --- CHEQUEO DEL MÁXIMO ---
+                    if (costo_ABB > met_ABB.max_alta) {
+                        met_ABB.max_alta = costo_ABB;
+                    }
+                }
+
+                // --- LSOBB ---
+                Alta_LSOBB(temp, LSOBB, &cant_Elementos, &ext3, &costo_LSOBB);
+                if (ext3 == 1) {
+                    met_LSO.costo_total_alta += costo_LSOBB;
+                    met_LSO.cant_alta_exito++;
+
+                    // --- CHEQUEO DEL MÁXIMO ---
+                    if (costo_LSOBB > met_LSO.max_alta) {
+                        met_LSO.max_alta = costo_LSOBB;
+                    }
+                }
+                break;
+
+            // BAJA
+            case 2:
+            Baja_LVO(temp, &Acc_LVO, &ext1, &costo_LVO);
+                if (ext1 == 1) {
+                    met_LVO.costo_total_baja += costo_LVO;
+                    met_LVO.cant_baja_exito++;
+
+                    // --- CHEQUEO DEL MÁXIMO ---
+                    if (costo_LVO > met_LVO.max_baja) {
+                        met_LVO.max_baja = costo_LVO;
+                    }
+                }
+
+
+            Baja_ABB(temp, &Raiz_ABB, &ext2, &costo_ABB);
+                if (ext2 == 1) {
+                    met_ABB.costo_total_baja += costo_ABB;
+                    met_ABB.cant_baja_exito++;
+
+                    // --- CHEQUEO DEL MÁXIMO ---
+                    if (costo_ABB > met_ABB.max_baja) {
+                        met_ABB.max_baja = costo_ABB;
+                    }
+                }
+
+            Baja_LSOBB(temp, LSOBB, &cant_Elementos, &ext3, &costo_LSOBB);
+                if (ext3 == 1) {
+                    met_LSO.costo_total_baja += costo_LSOBB;
+                    met_LSO.cant_baja_exito++;
+
+                    // --- CHEQUEO DEL MÁXIMO ---
+                    if (costo_LSOBB > met_LSO.max_baja) {
+                        met_LSO.max_baja = costo_LSOBB;
+                    }
+                }
+                break;
+
+            // EVOCACION
+            case 3: {
+                Elector recup_LVO, recup_ABB, recup_LSOBB;
+
+                // --- Evocación LVO ---
+                Evocacion_LVO(temp.DNI, &recup_LVO, Acc_LVO, &ext1, &costo_LVO);
+                if (ext1 == 1) {
+                    met_LVO.costo_total_evo_exito += costo_LVO;
+                    met_LVO.cant_evo_exito++;
+                    if (costo_LVO > met_LVO.max_evo_exito) met_LVO.max_evo_exito = costo_LVO;
+                } else {
+                    met_LVO.costo_total_evo_fracaso += costo_LVO;
+                    met_LVO.cant_evo_fracaso++;
+                    if (costo_LVO > met_LVO.max_evo_fracaso) met_LVO.max_evo_fracaso = costo_LVO;
+                }
+
+                // --- Evocación ABB ---
+                Evocacion_ABB(temp.DNI, &recup_ABB, Raiz_ABB, &ext2, &costo_ABB);
+                if (ext2 == 1) {
+                    met_ABB.costo_total_evo_exito += costo_ABB;
+                    met_ABB.cant_evo_exito++;
+                    if (costo_ABB > met_ABB.max_evo_exito) met_ABB.max_evo_exito = costo_ABB;
+                } else {
+                    met_ABB.costo_total_evo_fracaso += costo_ABB;
+                    met_ABB.cant_evo_fracaso++;
+                    if (costo_ABB > met_ABB.max_evo_fracaso) met_ABB.max_evo_fracaso = costo_ABB;
+                }
+
+                // --- Evocación LSOBB ---
+                Evocacion_LSOBB(temp.DNI, LSOBB, &recup_LSOBB, cant_Elementos, &ext3, &costo_LSOBB);
+                if (ext3 == 1) {
+                    met_LSO.costo_total_evo_exito += costo_LSOBB;
+                    met_LSO.cant_evo_exito++;
+                    if (costo_LSOBB > met_LSO.max_evo_exito) met_LSO.max_evo_exito = costo_LSOBB;
+                } else {
+                    met_LSO.costo_total_evo_fracaso += costo_LSOBB;
+                    met_LSO.cant_evo_fracaso++;
+                    if (costo_LSOBB > met_LSO.max_evo_fracaso) met_LSO.max_evo_fracaso = costo_LSOBB;
+                }
+                break;
             }
         }
+
     }
+
+
+
+
     fclose(archivo);
 
-                break;
+    float med_alta_lvo = 0, med_alta_abb = 0, med_alta_lso = 0;
+    float med_baja_lvo = 0, med_baja_abb = 0, med_baja_lso = 0;
+    float med_eve_lvo = 0, med_eve_abb = 0, med_eve_lso = 0;
+    float med_evf_lvo = 0, med_evf_abb = 0, med_evf_lso = 0;
+
+
+    // --- ALTAS ---
+    if (met_LVO.cant_alta_exito > 0) {
+        med_alta_lvo = met_LVO.costo_total_alta / met_LVO.cant_alta_exito;
+    }
+    if (met_ABB.cant_alta_exito > 0) {
+        med_alta_abb = met_ABB.costo_total_alta / met_ABB.cant_alta_exito;
+    }
+    if (met_LSO.cant_alta_exito > 0) {
+        med_alta_lso = met_LSO.costo_total_alta / met_LSO.cant_alta_exito;
+    }
+
+    // --- BAJAS ---
+    if (met_LVO.cant_baja_exito > 0) {
+        med_baja_lvo = met_LVO.costo_total_baja / met_LVO.cant_baja_exito;
+    }
+    if (met_ABB.cant_baja_exito > 0) {
+        med_baja_abb = met_ABB.costo_total_baja / met_ABB.cant_baja_exito;
+    }
+    if (met_LSO.cant_baja_exito > 0) {
+        med_baja_lso = met_LSO.costo_total_baja / met_LSO.cant_baja_exito;
+    }
+
+    // --- EVOCACIÓN ÉXITO ---
+    if (met_LVO.cant_evo_exito > 0) {
+        med_eve_lvo = met_LVO.costo_total_evo_exito / met_LVO.cant_evo_exito;
+    }
+    if (met_ABB.cant_evo_exito > 0) {
+        med_eve_abb = met_ABB.costo_total_evo_exito / met_ABB.cant_evo_exito;
+    }
+    if (met_LSO.cant_evo_exito > 0) {
+        med_eve_lso = met_LSO.costo_total_evo_exito / met_LSO.cant_evo_exito;
+    }
+
+    // --- EVOCACIÓN FRACASO ---
+    if (met_LVO.cant_evo_fracaso > 0) {
+        med_evf_lvo = met_LVO.costo_total_evo_fracaso / met_LVO.cant_evo_fracaso;
+    }
+    if (met_ABB.cant_evo_fracaso > 0) {
+        med_evf_abb = met_ABB.costo_total_evo_fracaso / met_ABB.cant_evo_fracaso;
+    }
+    if (met_LSO.cant_evo_fracaso > 0) {
+        med_evf_lso = met_LSO.costo_total_evo_fracaso / met_LSO.cant_evo_fracaso;
+    }
+
+    // =======================================================================================
+    // 2. IMPRESIÓN DE LA TABLA COMPARATIVA
+    // =======================================================================================
+    printf("\n");
+    printf("\t\t\t+----------------------+------------+------------+------------+\n");
+    printf("\t\t\t| METRICA              |    LVO     |   LSOBB    |    ABB     |\n");
+    printf("\t\t\t+----------------------+------------+------------+------------+\n");
+    printf("\t\t\t| Alta Maxima          | %10.2f | %10.2f | %10.2f |\n", met_LVO.max_alta, met_LSO.max_alta, met_ABB.max_alta);
+    printf("\t\t\t| Alta Media           | %10.2f | %10.2f | %10.2f |\n", med_alta_lvo, med_alta_lso, med_alta_abb);
+    printf("\t\t\t| Alta Cantidad        | %10d | %10d | %10d |\n", met_LVO.cant_alta_exito, met_LSO.cant_alta_exito, met_ABB.cant_alta_exito);
+    printf("\t\t\t+----------------------+------------+------------+------------+\n");
+    printf("\t\t\t| Baja Maxima          | %10.2f | %10.2f | %10.2f |\n", met_LVO.max_baja, met_LSO.max_baja, met_ABB.max_baja);
+    printf("\t\t\t| Baja Media           | %10.2f | %10.2f | %10.2f |\n", med_baja_lvo, med_baja_lso, med_baja_abb);
+    printf("\t\t\t| Baja Cantidad        | %10d | %10d | %10d |\n", met_LVO.cant_baja_exito, met_LSO.cant_baja_exito, met_ABB.cant_baja_exito);
+    printf("\t\t\t+----------------------+------------+------------+------------+\n");
+    printf("\t\t\t|   Evocacion          |            |            |            |\n");
+    printf("\t\t\t+----------------------+------------+------------+------------+\n");
+    printf("\t\t\t| Exito Maxima         | %10.2f | %10.2f | %10.2f |\n", met_LVO.max_evo_exito, met_LSO.max_evo_exito, met_ABB.max_evo_exito);
+    printf("\t\t\t| Exito Media          | %10.2f | %10.2f | %10.2f |\n", med_eve_lvo, med_eve_lso, med_eve_abb);
+    printf("\t\t\t| Exito Cantidad       | %10d | %10d | %10d |\n", met_LVO.cant_evo_exito, met_LSO.cant_evo_exito, met_ABB.cant_evo_exito);
+    printf("\t\t\t+----------------------+------------+------------+------------+\n");
+    printf("\t\t\t| Fracaso Maxima       | %10.2f | %10.2f | %10.2f |\n", met_LVO.max_evo_fracaso, met_LSO.max_evo_fracaso, met_ABB.max_evo_fracaso);
+    printf("\t\t\t| Fracaso Media        | %10.2f | %10.2f | %10.2f |\n", med_evf_lvo, med_evf_lso, med_evf_abb);
+    printf("\t\t\t| Fracaso Cantidad     | %10d | %10d | %10d |\n", met_LVO.cant_evo_fracaso, met_LSO.cant_evo_fracaso, met_ABB.cant_evo_fracaso);
+    printf("\t\t\t+----------------------+------------+------------+------------+\n\n");
+
+    break;
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             case 2:
                 printf("Mostrando...\n");
                 break;
