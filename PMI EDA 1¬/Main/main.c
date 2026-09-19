@@ -349,24 +349,37 @@ void Evocacion_ABB(int Dni_Busq, Elector* salida, nodo_abb* raiz, int* exito, fl
 //===========================================================================================================================
 //===========================================================================================================================
 
-//Localizacion
-//Localizar (in x, out pos, out éxito)
+// Localizacion LSOBB
 void Localizar_LSOBB(int dni_buscado, Elector LSOBB[], int cant_elementos, int* pos, int* exito, int* costo_busq) {
 
-   if (cant_elementos == 0) {
+    if (cant_elementos == 0) {
         *exito = 0;
         *pos = 0;
+        *costo_busq = 0;
         return;
+    }
+
+
+    int arr_repe[cant_elementos]; // vector de marca
+
+
+    for (int i = 0; i < cant_elementos; i++){
+        arr_repe[i] = 0;
     }
 
     int li = 0;
     int ls = cant_elementos - 1;
-    int m = (li + ls + 1) / 2;
     *costo_busq = 0;
 
-   while (li < ls) {
+
+    while (li < ls) {
         int m = (li + ls) / 2;
-        *costo_busq += 1;
+
+
+        if(arr_repe[m] == 0){
+            *costo_busq += 1;
+            arr_repe[m] = 1;
+        }
 
         if (LSOBB[m].DNI < dni_buscado) {
             li = m + 1;
@@ -374,15 +387,25 @@ void Localizar_LSOBB(int dni_buscado, Elector LSOBB[], int cant_elementos, int* 
             ls = m;
         }
     }
-    *costo_busq += 1;
+
+
+    if(arr_repe[li] == 0){
+        *costo_busq += 1;
+        arr_repe[li] = 1;
+    }
+
+
     if (LSOBB[li].DNI == dni_buscado) {
         *exito = 1;
         *pos = li;
     } else {
         *exito = 0;
-        // Si no lo encontro indicamos dónde deberia ir para el ALTAA
-        if (LSOBB[li].DNI < dni_buscado) *pos = li + 1;
-        else *pos = li;
+
+        if (LSOBB[li].DNI < dni_buscado) {
+            *pos = li + 1;
+        } else {
+            *pos = li;
+        }
     }
 }
 
@@ -472,10 +495,81 @@ void mayusc(char* cadena) {
     }
 }
 
+void pausar_y_limpiar() {
+    printf("\nPresione ENTER para continuar...");
+    fflush(stdin);
+    getchar();
+    system("cls");
+}
 
+// Mostrar LVO
+void Mostrar_LVO(nodo_lvo* cabeza) {
+    printf("\n\t+------------+--------------------------------+--------------------------------+------+------+------+\n");
+    printf("\t|    DNI     |       NOMBRE Y APELLIDO        |           DOMICILIO            | C.P. | MESA | CIRC |\n");
+    printf("\t+------------+--------------------------------+--------------------------------+------+------+------+\n");
 
+    nodo_lvo* aux = cabeza;
+    while (aux != NULL && aux->VIPD.DNI != 999999999) {
+        printf("\t| %10d | %-30.30s | %-30.30s | %4d | %4d | %4d |\n",
+               aux->VIPD.DNI,
+               aux->VIPD.Nombre_Apellido,
+               aux->VIPD.Domicilio,
+               aux->VIPD.Cod_Postal,
+               aux->VIPD.Mesa,
+               aux->VIPD.Circuito);
+        aux = aux->PS;
+    }
+
+    printf("\t+------------+--------------------------------+--------------------------------+------+------+------+\n");
+}
+// Mostrar ABB
+
+void Mostrar_ABB_Recursivo(nodo_abb* raiz) {
+    if (raiz != NULL) {
+        Mostrar_ABB_Recursivo(raiz->P_izq);
+
+        printf("\t| %10d | %-30.30s | %-30.30s | %4d | %4d | %4d |\n",
+               raiz->VIPD.DNI,
+               raiz->VIPD.Nombre_Apellido,
+               raiz->VIPD.Domicilio,
+               raiz->VIPD.Cod_Postal,
+               raiz->VIPD.Mesa,
+               raiz->VIPD.Circuito);
+
+        Mostrar_ABB_Recursivo(raiz->P_der);
+    }
+}
+
+void Mostrar_ABB(nodo_abb* raiz) {
+    printf("\n\t+------------+--------------------------------+--------------------------------+------+------+------+\n");
+    printf("\t|    DNI     |       NOMBRE Y APELLIDO        |           DOMICILIO            | C.P. | MESA | CIRC |\n");
+    printf("\t+------------+--------------------------------+--------------------------------+------+------+------+\n");
+
+    Mostrar_ABB_Recursivo(raiz); // Llamamos a la recursiva para que rellene los datos
+
+    printf("\t+------------+--------------------------------+--------------------------------+------+------+------+\n");
+}
+
+// Mostrar LSO
+void Mostrar_LSOBB(Elector LSOBB[], int cant_Elementos) {
+    printf("\n\t+------------+--------------------------------+--------------------------------+------+------+------+\n");
+    printf("\t|    DNI     |       NOMBRE Y APELLIDO        |           DOMICILIO            | C.P. | MESA | CIRC |\n");
+    printf("\t+------------+--------------------------------+--------------------------------+------+------+------+\n");
+
+    for (int i = 0; i < cant_Elementos; i++) {
+        printf("\t| %10d | %-30.30s | %-30.30s | %4d | %4d | %4d |\n",
+               LSOBB[i].DNI,
+               LSOBB[i].Nombre_Apellido,
+               LSOBB[i].Domicilio,
+               LSOBB[i].Cod_Postal,
+               LSOBB[i].Mesa,
+               LSOBB[i].Circuito);
+    }
+
+    printf("\t+------------+--------------------------------+--------------------------------+------+------+------+\n");
+}
 int main(){
-    Elector LSOBB[2200]; //apropocito le di de mas, por si se carga un archivo con 2003 personas, asi no revienta
+    Elector LSOBB[2200];
     int cant_Elementos = 0;
     nodo_lvo* Acc_LVO = NULL;
     nodo_abb* Raiz_ABB = NULL;
@@ -503,15 +597,22 @@ int main(){
 
 
     int opcion;
+    int opc;
 
     do{
-        printf("\n======================= MENU =======================\n");
-        printf("[1] --> Comparacion de estructuras.\n");
-        printf("[2] --> Mostrar Estructuras.\n");
-        printf("[3] --> Salir.\n");
-        printf("====================================================\n");
-        printf("Ingrese una opcion: ");
+        printf("\n");
+        printf("\t\t\t+--------------------------------------------------+\n");
+        printf("\t\t\t|    Padron electoral de San Luis                  |\n");
+        printf("\t\t\t+--------------------------------------------------+\n");
+        printf("\t\t\t|                                                  |\n");
+        printf("\t\t\t|  [1] --> Comparacion de estructuras.             |\n");
+        printf("\t\t\t|  [2] --> Mostrar Estructuras.                    |\n");
+        printf("\t\t\t|  [3] --> Salir.                                  |\n");
+        printf("\t\t\t|                                                  |\n");
+        printf("\t\t\t+--------------------------------------------------+\n");
+        printf("\t\t\t       --> Ingrese una opcion: ");
         scanf("%d", &opcion);
+        system("cls");
         switch(opcion) {
 
 
@@ -533,19 +634,24 @@ int main(){
         return -1;
     }
 
-    while(fscanf(archivo,"%d",&cod_operacion) != EOF){
-        fscanf(archivo, "%d", &temp.DNI);
-        // Leemos nombre y direccion, permite espacios
-        fscanf(archivo, " %[^\n]", temp.Nombre_Apellido);
-        mayusc(temp.Nombre_Apellido);
+    while(fscanf(archivo, "%d", &cod_operacion) == 1) {
 
-        fscanf(archivo, " %[^\n]", temp.Domicilio);
-        mayusc(temp.Domicilio);
+        // 2. TODAS las operaciones leen el DNI (Agregamos protección extra aquí también)
+        if (fscanf(archivo, "%d", &temp.DNI) != 1) {
+            break; // Si falla leyendo el DNI, cortamos el ciclo para no colgarnos
+        }
 
-        fscanf(archivo, "%d", &temp.Cod_Postal);
-        fscanf(archivo, "%d", &temp.Mesa);
-        fscanf(archivo, "%d", &temp.Circuito);
+        if (cod_operacion == 1 || cod_operacion == 2) {
+            fscanf(archivo, " %[^\n]", temp.Nombre_Apellido);
+            mayusc(temp.Nombre_Apellido);
 
+            fscanf(archivo, " %[^\n]", temp.Domicilio);
+            mayusc(temp.Domicilio);
+
+            fscanf(archivo, "%d", &temp.Cod_Postal);
+            fscanf(archivo, "%d", &temp.Mesa);
+            fscanf(archivo, "%d", &temp.Circuito);
+        }
 
         //Costos temps
         int ext1, ext2, ext3;
@@ -732,32 +838,34 @@ int main(){
         med_evf_lso = met_LSO.costo_total_evo_fracaso / met_LSO.cant_evo_fracaso;
     }
 
-    // =======================================================================================
-    // 2. IMPRESIÓN DE LA TABLA COMPARATIVA
-    // =======================================================================================
+
     printf("\n");
     printf("\t\t\t+----------------------+------------+------------+------------+\n");
     printf("\t\t\t| METRICA              |    LVO     |   LSOBB    |    ABB     |\n");
     printf("\t\t\t+----------------------+------------+------------+------------+\n");
-    printf("\t\t\t| Alta Maxima          | %10.2f | %10.2f | %10.2f |\n", met_LVO.max_alta, met_LSO.max_alta, met_ABB.max_alta);
-    printf("\t\t\t| Alta Media           | %10.2f | %10.2f | %10.2f |\n", med_alta_lvo, med_alta_lso, med_alta_abb);
-    printf("\t\t\t| Alta Cantidad        | %10d | %10d | %10d |\n", met_LVO.cant_alta_exito, met_LSO.cant_alta_exito, met_ABB.cant_alta_exito);
+    printf("\t\t\t|   Alta               |            |            |            |\n");
     printf("\t\t\t+----------------------+------------+------------+------------+\n");
-    printf("\t\t\t| Baja Maxima          | %10.2f | %10.2f | %10.2f |\n", met_LVO.max_baja, met_LSO.max_baja, met_ABB.max_baja);
-    printf("\t\t\t| Baja Media           | %10.2f | %10.2f | %10.2f |\n", med_baja_lvo, med_baja_lso, med_baja_abb);
-    printf("\t\t\t| Baja Cantidad        | %10d | %10d | %10d |\n", met_LVO.cant_baja_exito, met_LSO.cant_baja_exito, met_ABB.cant_baja_exito);
+    printf("\t\t\t|      Maxima          | %10.2f | %10.2f | %10.2f |\n", met_LVO.max_alta, met_LSO.max_alta, met_ABB.max_alta);
+    printf("\t\t\t|      Media           | %10.2f | %10.2f | %10.2f |\n", med_alta_lvo, med_alta_lso, med_alta_abb);
+    printf("\t\t\t|      Cant            | %10d | %10d | %10d |\n", met_LVO.cant_alta_exito, met_LSO.cant_alta_exito, met_ABB.cant_alta_exito);
+    printf("\t\t\t+----------------------+------------+------------+------------+\n");
+    printf("\t\t\t|   Baja               |            |            |            |\n");
+    printf("\t\t\t+----------------------+------------+------------+------------+\n");
+    printf("\t\t\t|      Maxima          | %10.2f | %10.2f | %10.2f |\n", met_LVO.max_baja, met_LSO.max_baja, met_ABB.max_baja);
+    printf("\t\t\t|      Media           | %10.2f | %10.2f | %10.2f |\n", med_baja_lvo, med_baja_lso, med_baja_abb);
+    printf("\t\t\t|      Cant            | %10d | %10d | %10d |\n", met_LVO.cant_baja_exito, met_LSO.cant_baja_exito, met_ABB.cant_baja_exito);
     printf("\t\t\t+----------------------+------------+------------+------------+\n");
     printf("\t\t\t|   Evocacion          |            |            |            |\n");
     printf("\t\t\t+----------------------+------------+------------+------------+\n");
     printf("\t\t\t| Exito Maxima         | %10.2f | %10.2f | %10.2f |\n", met_LVO.max_evo_exito, met_LSO.max_evo_exito, met_ABB.max_evo_exito);
     printf("\t\t\t| Exito Media          | %10.2f | %10.2f | %10.2f |\n", med_eve_lvo, med_eve_lso, med_eve_abb);
-    printf("\t\t\t| Exito Cantidad       | %10d | %10d | %10d |\n", met_LVO.cant_evo_exito, met_LSO.cant_evo_exito, met_ABB.cant_evo_exito);
+    printf("\t\t\t| Exito Cant           | %10d | %10d | %10d |\n", met_LVO.cant_evo_exito, met_LSO.cant_evo_exito, met_ABB.cant_evo_exito);
     printf("\t\t\t+----------------------+------------+------------+------------+\n");
     printf("\t\t\t| Fracaso Maxima       | %10.2f | %10.2f | %10.2f |\n", met_LVO.max_evo_fracaso, met_LSO.max_evo_fracaso, met_ABB.max_evo_fracaso);
     printf("\t\t\t| Fracaso Media        | %10.2f | %10.2f | %10.2f |\n", med_evf_lvo, med_evf_lso, med_evf_abb);
-    printf("\t\t\t| Fracaso Cantidad     | %10d | %10d | %10d |\n", met_LVO.cant_evo_fracaso, met_LSO.cant_evo_fracaso, met_ABB.cant_evo_fracaso);
+    printf("\t\t\t| Fracaso Cant         | %10d | %10d | %10d |\n", met_LVO.cant_evo_fracaso, met_LSO.cant_evo_fracaso, met_ABB.cant_evo_fracaso);
     printf("\t\t\t+----------------------+------------+------------+------------+\n\n");
-
+    pausar_y_limpiar();
     break;
             }
 
@@ -776,13 +884,57 @@ int main(){
 
 
 
-            case 2:
-                printf("Mostrando...\n");
+case 2:
+                printf("\n");
+                printf("\t\t\t+--------------------------------------------------+\n");
+                printf("\t\t\t|    Mostrar Estructuras                           |\n");
+                printf("\t\t\t+--------------------------------------------------+\n");
+                printf("\t\t\t|                                                  |\n");
+                printf("\t\t\t|  [1] --> LSOBB.                                  |\n");
+                printf("\t\t\t|  [2] --> ABB.                                    |\n");
+                printf("\t\t\t|  [3] --> LVO.                                    |\n");
+                printf("\t\t\t|  [4] --> Salir.                                  |\n");
+                printf("\t\t\t|                                                  |\n");
+                printf("\t\t\t+--------------------------------------------------+\n");
+                printf("\t\t\t   --> Ingrese una opcion: ");
+                scanf("%d", &opc);
+
+                system("cls"); // Limpiamos el menú antes de mostrar los datos
+
+                switch(opc){
+                    case 1:
+                        printf("\t\t\t--- Estructura LSOBB ---\n");
+                        Mostrar_LSOBB(LSOBB, cant_Elementos);
+                        pausar_y_limpiar();
+                        break;
+
+                    case 2:
+                        printf("\t\t\t--- Estructura ABB ---\n");
+                        Mostrar_ABB(Raiz_ABB);
+                        pausar_y_limpiar();
+                        break;
+
+                    case 3:
+                        printf("\t\t\t--- Estructura LVO ---\n");
+                        Mostrar_LVO(Acc_LVO); // O Acc_lvo dependiendo de cómo la declaraste
+                        pausar_y_limpiar();
+                        break;
+
+                    case 4:
+                        printf("Volviendo al menu principal...\n");
+                        break;
+
+                    default: // Corrección: no lleva la palabra "case"
+                        printf("Opcion invalida. Intente de nuevo.\n");
+                        pausar_y_limpiar();
+                        break;
+                }
                 break;
 
-            case 3:
-                printf("Saliendo del programa...\n");
-                break;
+
+
+
+
 
             default:
                 printf("Opcion invalida. Intente de nuevo.\n");
