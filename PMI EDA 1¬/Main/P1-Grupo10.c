@@ -3,13 +3,20 @@
 #include <string.h>
 #include <ctype.h>
 
+
+
+
+
+
+#define MAX 10
 //registro del padron electoral de San Luis
 
-/*
---------Lista Vinculada Ordenada con terminacion dada por contenido (+ infinito) (LVO).
---------Lista Secuencial Ordenada con busqueda binaria (LSOBB).
---------Arbol Binario de Busqueda (ABB).
-*/
+
+    /*Conclusion:
+    -->Si se trata de altas la estructura mas eficiente es ABB con un costo max de 0.5 y medio de 0.5
+    -->Si se trata de bajas la mas eficiente es LVO con un costo max de 0.5 y medio de 0.5
+    -->Por ultimo si se trata de evocaciones la mas eficiente es LSOBB con un costo max(Fracaso/exito)
+    de 11.00 y medio(Exito) de 10.14 y medio(Fracaso) de 9.88 */
 
 
 // Definir nupla  electorr
@@ -23,17 +30,17 @@ typedef struct {
 } Elector;
 
 typedef struct {
-    // ALTAS (Solo exitosas)
+    // ALTAS
     float costo_total_alta;
     int cant_alta_exito;
     float max_alta;
 
-    // BAJAS (Solo exitosas)
+    // BAJAS
     float costo_total_baja;
     int cant_baja_exito;
     float max_baja;
 
-    // EVOCACIONES (Separadas en Exito y Fracaso)
+    // EVOCACIONES
     float costo_total_evo_exito;
     int cant_evo_exito;
     float max_evo_exito;
@@ -69,21 +76,22 @@ typedef struct nodo_lvo {
 
 
 //Localizar (in x, out pos, out éxito)
-// Localizar LVO
 void Localizar_LVO(int dni_buscado, nodo_lvo* cabeza, nodo_lvo** pos, int* exito, float* costo_busq) {
     nodo_lvo* aux = cabeza;
     nodo_lvo* anterior = NULL;
     *costo_busq = 0.0;
 
     while(aux->VIPD.DNI < dni_buscado) {
-        *costo_busq += 1.0;
         anterior = aux;
         aux = aux->PS;
+        if(aux->VIPD.DNI <= 999999999){
+            *costo_busq += 1.0;
+        }
     }
 
     *costo_busq += 1.0;
 
-    if (aux->VIPD.DNI == dni_buscado) *exito = 1;
+    if (aux->VIPD.DNI == dni_buscado && aux->VIPD.DNI != 999999999) *exito = 1;
     else *exito = 0;
 
     *pos = anterior;
@@ -204,7 +212,6 @@ typedef struct nodo_abb{
 } nodo_abb;
 
 //Localizar (in x, out pos, out éxito)
-// Localizar ABB
 void Localizar_ABB(int Dni_Buscado, nodo_abb* raiz, nodo_abb** pos, int* exito, float* costo_busq) {
     nodo_abb* actual = raiz;
     nodo_abb* padre = NULL;
@@ -305,20 +312,25 @@ void Baja_ABB(Elector a_eliminar, nodo_abb** raiz, int* exito, float* costo_estr
         // Caso 3: dos hijos Política de reemplazo
         else {
             nodo_abb* padre_reemplazo = actual;
-            nodo_abb* reemplazo = actual->P_izq; // Menor de los mayores (buscamos predecesor)
+            nodo_abb* reemplazo = actual->P_der;
 
-            while (reemplazo->P_der != NULL) {
+
+            while (reemplazo->P_izq != NULL) {
                 padre_reemplazo = reemplazo;
-                reemplazo = reemplazo->P_der;
+                reemplazo = reemplazo->P_izq;
             }
 
             actual->VIPD = reemplazo->VIPD;
             *costo_estructural += 1.0; // Costo de copia de datos
 
-            if (padre_reemplazo == actual) padre_reemplazo->P_izq = reemplazo->P_izq;
-            else padre_reemplazo->P_der = reemplazo->P_izq;
+            //Desconexión de puntero
+            if (padre_reemplazo == actual) {
+                padre_reemplazo->P_der = reemplazo->P_der;
+            } else {
+                padre_reemplazo->P_izq = reemplazo->P_der;
+            }
 
-            *costo_estructural += 0.5; // Desconexión de puntero
+            *costo_estructural += 0.5;
             free(reemplazo);
         }
         *exito = 1;
@@ -416,20 +428,22 @@ void Alta_LSOBB(Elector Nuevo, Elector LSOBB[], int* cant_Elementos, int* exito,
     Localizar_LSOBB(Nuevo.DNI, LSOBB, *cant_Elementos, &pos, &ext, &costo_busq);
 
     *costo_estructural = 0;
-
-    if(ext == 1) {
-        *exito = 0;
-    } else {
-        for (int i = *cant_Elementos - 1; i >= pos; i--) {
-            LSOBB[i+1] = LSOBB[i];
-            *costo_estructural += 1;
+    if (*cant_Elementos < MAX) {
+        if (ext == 1) {
+            *exito = 0;
+        } else {
+            for (int i = *cant_Elementos - 1; i >= pos; i--) {
+                LSOBB[i+1] = LSOBB[i];
+                *costo_estructural += 1;
+            }
+            LSOBB[pos] = Nuevo;
+            *cant_Elementos += 1;
+            *exito = 1;
         }
-        LSOBB[pos] = Nuevo;
-        *cant_Elementos += 1;
-        *exito = 1;
+    } else {
+        *exito = 0;
     }
 }
-
 // Baja LSOBB
 void Baja_LSOBB(Elector a_eliminar, Elector LSOBB[], int* cant_Elem, int* exito, int* costo_estructural) {
     int ext, pos;
@@ -558,10 +572,6 @@ void Mostrar_ABB_Preorden(nodo_abb* raiz) {
 }
 
 void Mostrar_ABB(nodo_abb* raiz) {
-     printf("\n      +==========+================================+================================+======+======+======+\n");
-    printf("      |    DNI   |       NOMBRE Y APELLIDO        |           DOMICILIO            | C.P. | MESA | CIRC |\n");
-    printf("      +==========+================================+================================+======+======+======+\n");
-
         if (raiz == NULL) {
         printf("\tEl arbol se encuentra vacio.\n");
     } else {
@@ -590,7 +600,7 @@ void Mostrar_LSOBB(Elector LSOBB[], int cant_Elementos) {
     printf("      +==========+================================+================================+======+======+======+\n");
 }
 int main(){
-    Elector LSOBB[2200];
+    Elector LSOBB[MAX];
     int cant_Elementos = 0;
     nodo_lvo* Acc_LVO = NULL;
     nodo_abb* Raiz_ABB = NULL;
@@ -624,7 +634,7 @@ int main(){
     do{
         printf("\n");
         printf("\t\t\t+==================================================+\n");
-        printf("\t\t\t|    Avalle Facundo y Avalle Fabricio              |\n");
+        printf("\t\t\t|    Avalle Facundo y Avalle Fabricio  G10         |\n");
         printf("\t\t\t+==================================================+\n");
         printf("\t\t\t|    Padron electoral de San Luis                  |\n");
         printf("\t\t\t+==================================================+\n");
@@ -863,7 +873,7 @@ int main(){
         med_evf_lso = met_LSO.costo_total_evo_fracaso / met_LSO.cant_evo_fracaso;
     }
 
-
+    printf("Precarga realizada con exito\n");
     printf("\n");
     printf("\t\t\t+======================+============+============+=============+\n");
     printf("\t\t\t| METRICA              |    LVO     |   LSOBB    |    ABB     |\n");
@@ -890,37 +900,29 @@ int main(){
     printf("\t\t\t| Fracaso Media        |     %.2f |       %.2f |      %.2f |\n", med_evf_lvo, med_evf_lso, med_evf_abb);
     printf("\t\t\t| Fracaso Cant         |       %d |       %d |       %d |\n", met_LVO.cant_evo_fracaso, met_LSO.cant_evo_fracaso, met_ABB.cant_evo_fracaso);
     printf("\t\t\t+======================+============+============+============+\n");
+
+    /*Conclusion:
+    -->Si se trata de altas la estructura mas eficiente es ABB con un costo max de 0.5 y medio de 0.5
+    -->Si se trata de bajas la mas eficiente es LVO con un costo max de 0.5 y medio de 0.5
+    -->Por ultimo si se trata de evocaciones la mas eficiente es LSOBB con un costo max(Fracaso/exito)
+    de 11.00 y medio(Exito) de 10.14 y medio(Fracaso) de 9.88 */
+
     pausar_y_limpiar();
     break;
             }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 case 2:
                 printf("\n");
-                printf("\t\t\t+--------------------------------------------------+\n");
+                printf("\t\t\t+==================================================+\n");
                 printf("\t\t\t|    Mostrar Estructuras                           |\n");
-                printf("\t\t\t+--------------------------------------------------+\n");
+                printf("\t\t\t+==================================================+\n");
                 printf("\t\t\t|                                                  |\n");
                 printf("\t\t\t|  [1] --> LSOBB.                                  |\n");
                 printf("\t\t\t|  [2] --> ABB.                                    |\n");
                 printf("\t\t\t|  [3] --> LVO.                                    |\n");
                 printf("\t\t\t|  [4] --> Salir.                                  |\n");
                 printf("\t\t\t|                                                  |\n");
-                printf("\t\t\t+--------------------------------------------------+\n");
+                printf("\t\t\t+==================================================+\n");
                 printf("\t\t\t   --> Ingrese una opcion: ");
                 scanf("%d", &opc);
 
